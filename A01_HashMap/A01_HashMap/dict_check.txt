@@ -1,0 +1,45 @@
+about this repo
+
+this repo contains a list of the ten-thousand most common english words in order of frequency, as determined by n-gram frequency analysis of the google's trillion word corpus.
+
+according to the google machine translation team
+
+    here at google research we have been using word n-gram models for a variety of r&d projects, such as statistical machine translation, speech recognition, spelling correction, entity detection, information extraction, and others. while such models have usually been estimated from training corpora containing at most a few billion words, we have been harnessing the vast power of google's datacenters and distributed processing infrastructure to process larger and larger training corpora. we found that there's no data like more data, and scaled up the size of our data by one order of magnitude, and then another, and then one more resulting in a training corpus of one trillion words from public web pages.
+
+    we believe that the entire research community can benefit from access to such massive amounts of data. it will advance the state of the art, it will focus research in the promising direction of large-scale, data-driven approaches, and it will allow all research groups, no matter how large or small their computing resources, to play together. that's why we decided to share this enormous dataset with everyone. we processed more than a trillion words of running text and are publishing the counts for all billion five-word sequences that appear at least fourty times. there are one point three million unique words, after discarding words that appear less than two-hundred times.
+
+this repo is derived from peter norvig's compilation of the one-third million most frequent english words. i limited this file to the ten-thousand most common words, then removed the appended frequency counts by running this sed command in my text editor
+
+sed
+
+special thanks to koseki for de-duplicating the list.
+swear-free lists
+
+there are two additional lists which are identical to the original ten-thousand word list, but with swear words removed. these are ideal for generating urls temporary passwords or other uses where swear words may not be desired.
+
+swears were removed based on these lists
+
+word length lists
+
+three of the lists all based on the us english list are based on word length
+
+    short one to four characters
+    medium five to eight characters
+    long nine or more characters
+
+each list retains the original list sorting by frequency, descending.
+usage
+
+this repo is useful as a corpus for typing training programs. according to analysis of the oxford english corpus, the seven thousand most common english lemmas account for approximately ninety percent of usage, so a ten-thousand word training corpus is more than sufficient for practical training applications.
+
+to use this list as a training corpus in amphetype, paste the contents into the "lesson generator" tab with the following settings
+
+make three copies of the list
+
+divide into sublists of size three
+
+add to sources as
+
+in the sources tab, you should see google ten-thousand english available for training. set wpm at ten more than your current average, set accuracy to ninety-eight percent, and you're set to train.
+
+enjoy
