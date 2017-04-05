@@ -1,5 +1,18 @@
 #include "stdafx.h"
 
+unsigned parse_uint(const char *str, unsigned def)
+{
+    if (str == nullptr) return def;
+    auto val = 0;
+    while (*str != '\0')
+    {
+        if (*str < '0' || *str > '9') return def;
+        val *= 10;
+        val += *(str++) - '0';
+    }
+    return val;
+}
+
 bool are_same(const char *lhs, const char *rhs)
 {
     if (lhs == rhs) return true;

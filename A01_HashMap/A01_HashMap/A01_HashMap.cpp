@@ -3,21 +3,29 @@
 #include "HashDictionary.h"
 #include "WordReader.h"
 
-void testHash(std::function<int(const char*)> hashFn, bool printNewWords, bool printResults);
+void testHash(std::function<int(const char*)> hashFn, const char *const wordPath, unsigned tableSize);
 
-int main()
+int main(int argc, const char **const argv)
 {
+    for (size_t q = 0; q < argc; q++)
+    {
+        std::cout << argv[q] << std::endl;
+    }
+    std::cout << std::endl;
+    const char *const seedFile = argc >= 2 ? argv[1] : "dict_seed.txt";
+    unsigned tableSize = argc >= 3 ? parse_uint(argv[2], 100) : 100;
+
     std::cout << "Testing a 0-returning hash:" << std::endl << std::endl;
     testHash([](const char*) -> int
     {
         return 0;
-    }, false, true);
+    }, seedFile, tableSize);
 
     std::cout << std::endl << "Testing a first-character ascii value hash:" << std::endl << std::endl;
     testHash([](const char *word) -> int
     {
         return word == nullptr ? 0 : *word;
-    }, false, true);
+    }, seedFile, tableSize);
 
     std::cout << std::endl << "Testing a first-three-character ascii value sum hash:" << std::endl << std::endl;
     testHash([](const char *word) -> int
@@ -30,7 +38,7 @@ int main()
             if (*(word + q) == '\0') break;
         }
         return hash;
-    }, false, true);
+    }, seedFile, tableSize);
 
     std::cout << std::endl << "Testing a full-character ascii value sum hash:" << std::endl << std::endl;
     testHash([](const char *word) -> int
@@ -40,7 +48,7 @@ int main()
         while (*word != '\0')
             hash += *(word++);
         return hash;
-    }, false, true);
+    }, seedFile, tableSize);
 
     std::cout << std::endl << "Testing an ascii value shift-xor hash:" << std::endl << std::endl;
     testHash([](const char *word) -> int
@@ -51,7 +59,7 @@ int main()
         while (*word != '\0')
             hash ^= *(word++) << shiftAmt++;
         return hash;
-    }, false, true);
+    }, seedFile, tableSize);
 
     std::cout << std::endl << "Testing my own hashing function:" << std::endl << std::endl;
     testHash([](const char *word) -> int
@@ -64,38 +72,24 @@ int main()
             hash += *(word++);
         }
         return hash;
-    }, false, true);
+    }, seedFile, tableSize);
 
     pause();
 
     return 0;
 }
 
-void testHash(std::function<int(const char*)> hashFn, bool printNewWords, bool printResults)
+void testHash(std::function<int(const char*)> hashFn, const char *const wordPath, unsigned tableSize)
 {
     IDictionary *dict;
-    dict = new HashDictionary(hashFn);
+    dict = new HashDictionary(hashFn, tableSize);
 
     {
-        if (printNewWords) std::cout << "Reading in seed dictionary." << std::endl;
-        WordReader reader("dict_seed.txt");
+        WordReader reader(wordPath);
         while (reader.moveNext())
             dict->put(reader.current());
     }
 
-    {
-        if (printNewWords) std::cout << "Reading in check dictionary. The following words are new:" << std::endl;
-        WordReader reader("dict_check.txt");
-        while (reader.moveNext()) {
-            if (!dict->put(reader.current()) && printNewWords)
-                std::cout << reader.current() << std::endl;
-        }
-    }
-
-    if (printResults) {
-        if (printNewWords) std::cout << std::endl;
-        dict->printStats(std::cout);
-    }
-
+    dict->printStats(std::cout);
     delete dict;
 }

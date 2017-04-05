@@ -15,6 +15,8 @@ void SafeDelete(T *&tptr)
     }
 }
 
+unsigned parse_uint(const char *str, unsigned def);
+
 bool are_same(const char *lhs, const char *rhs);
 bool is_empty(const char *val);
 unsigned str_length(const char *str);

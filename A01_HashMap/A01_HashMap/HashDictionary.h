@@ -6,10 +6,8 @@
 class HashDictionary: public IDictionary
 {
 public:
-    HashDictionary(std::function<int(const char*)> hashFn);
+    HashDictionary(std::function<int(const char*)> hashFn, unsigned tableSize);
     ~HashDictionary();
-
-    static const unsigned BUCKET_COUNT = 100;
 
     virtual bool put(const char *const word) override;
     virtual bool has(const char *const word) override;
@@ -25,7 +23,8 @@ private:
     char _cloneBuffer[CLONE_BUFFER_SIZE];
     const char *const str_clone(const char *word);
 
-    LLNode<const char> *_buckets[BUCKET_COUNT];
+    unsigned _tableSize;
+    LLNode<const char> **_buckets;
 
     unsigned _duplicates;
     unsigned _count;
