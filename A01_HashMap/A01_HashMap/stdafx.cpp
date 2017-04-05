@@ -26,18 +26,6 @@ unsigned str_length(const char *str)
     return len;
 }
 
-char *str_clone(const char *const str)
-{
-    auto len = str_length(str);
-    auto buff = new char[len + 1];
-    for (size_t q = 0; q < len; q++)
-    {
-        buff[q] = str[q];
-    }
-    buff[len] = '\0';
-    return buff;
-}
-
 void pause()
 {
     static thread_local char buff[256];

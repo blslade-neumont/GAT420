@@ -2,7 +2,7 @@
 #include "HashDictionary.h"
 
 HashDictionary::HashDictionary(std::function<int(const char*)> hashFn)
-    : _count(0), _duplicates(0), _hashFn(hashFn)
+    : _count(0), _duplicates(0), _hashFn(hashFn), _cloneBufferPos(0)
 {
     for (size_t q = 0; q < BUCKET_COUNT; q++)
     {
@@ -89,4 +89,20 @@ void HashDictionary::printStats(std::ostream &out)
 
     out << "Ideal average: " << ideal_average << std::endl;
     out << "Standard deviation from the ideal: " << std_dev << std::endl;
+}
+
+const char *const HashDictionary::str_clone(const char *word)
+{
+    auto clonePtr = &_cloneBuffer[_cloneBufferPos];
+    while (_cloneBufferPos < CLONE_BUFFER_SIZE && *word != '\0')
+    {
+        _cloneBuffer[_cloneBufferPos++] = *(word++);
+    }
+    if (_cloneBufferPos >= CLONE_BUFFER_SIZE)
+    {
+        std::cerr << "Error! Clone buffer has been filled!" << std::endl;
+        return nullptr;
+    }
+    _cloneBuffer[_cloneBufferPos++] = '\0';
+    return clonePtr;
 }

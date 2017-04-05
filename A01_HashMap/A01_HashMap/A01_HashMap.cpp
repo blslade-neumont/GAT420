@@ -96,4 +96,6 @@ void testHash(std::function<int(const char*)> hashFn, bool printNewWords, bool p
         if (printNewWords) std::cout << std::endl;
         dict->printStats(std::cout);
     }
+
+    delete dict;
 }

@@ -20,6 +20,11 @@ public:
     virtual void printStats(std::ostream &out) override;
 
 private:
+    static const unsigned CLONE_BUFFER_SIZE = 100000;
+    unsigned _cloneBufferPos;
+    char _cloneBuffer[CLONE_BUFFER_SIZE];
+    const char *const str_clone(const char *word);
+
     LLNode<const char> *_buckets[BUCKET_COUNT];
 
     unsigned _duplicates;
