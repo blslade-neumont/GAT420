@@ -10,7 +10,7 @@ public:
     }
     ~LLNode()
     {
-        SafeDelete(_value);
+        //SafeDelete(_value);
         SafeDelete(_next);
     }
 
@@ -31,6 +31,18 @@ public:
     {
         next->setNext(_next);
         _next = next;
+    }
+
+    unsigned count()
+    {
+        auto self = this;
+        unsigned count = 0;
+        while (self != nullptr)
+        {
+            count++;
+            self = self->next();
+        }
+        return count;
     }
 
 private:

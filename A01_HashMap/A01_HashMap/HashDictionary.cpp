@@ -1,7 +1,8 @@
 #include "stdafx.h"
 #include "HashDictionary.h"
 
-HashDictionary::HashDictionary()
+HashDictionary::HashDictionary(std::function<int(const char*)> hashFn)
+    : _count(0), _duplicates(0), _hashFn(hashFn)
 {
     for (size_t q = 0; q < BUCKET_COUNT; q++)
     {
@@ -16,17 +17,23 @@ HashDictionary::~HashDictionary()
     }
 }
 
-void HashDictionary::put(const char *const word)
+bool HashDictionary::put(const char *const word)
 {
-    if (has(word)) return;
-    auto bucketIdx = this->hash(word) % BUCKET_COUNT;
+    if (has(word))
+    {
+        _duplicates++;
+        return false;
+    }
+    auto bucketIdx = this->_hashFn(word) % BUCKET_COUNT;
     auto newLL = new LLNode<const char>(str_clone(word));
     newLL->setNext(_buckets[bucketIdx]);
     _buckets[bucketIdx] = newLL;
+    _count++;
+    return true;
 }
 bool HashDictionary::has(const char *const word)
 {
-    auto bucketIdx = this->hash(word) % BUCKET_COUNT;
+    auto bucketIdx = this->_hashFn(word) % BUCKET_COUNT;
     auto node = _buckets[bucketIdx];
     while (node != nullptr)
     {
@@ -36,16 +43,50 @@ bool HashDictionary::has(const char *const word)
     return false;
 }
 
-unsigned HashDictionary::hash(const char *const word)
+unsigned HashDictionary::count()
 {
-    //This is a pretty crappy hash function, I know!
-    if (word == nullptr) return 0;
-    auto ptr = word;
-    unsigned hash = 42;
-    while (*ptr != '\0')
+    return _count;
+}
+unsigned HashDictionary::duplicateCount()
+{
+    return _duplicates;
+}
+
+void HashDictionary::printStats(std::ostream &out)
+{
+    out << "Table entries: " << BUCKET_COUNT << std::endl;
+    out << "Total words: " << count() << std::endl;
+
+    float ideal_average = (float)count() / BUCKET_COUNT;
+    unsigned min_words = _buckets[0]->count(), max_words = min_words, min_count = 1, max_count = 1;
+    float error = pow(abs(min_words - ideal_average), 2);
+
+    out << "Bucket counts: [";
+    out << min_words;
+    for (size_t q = 1; q < BUCKET_COUNT; q++)
     {
-        hash = ((hash << 16) | (hash >> 16)) * 7;
-        hash += *(ptr++);
+        auto words = _buckets[q]->count();
+        if (words < min_words)
+        {
+            min_words = words;
+            min_count = 1;
+        }
+        else if (words == min_words) min_count++;
+        if (words > max_words)
+        {
+            max_words = words;
+            max_count = 1;
+        }
+        else if (words == max_words) max_count++;
+        error += pow(abs((float)(words - ideal_average)), 2);
+        out << ", " << words;
     }
-    return hash;
+    out << "]" << std::endl;
+    float std_dev = sqrt(error / BUCKET_COUNT);
+
+    out << "Smallest quantity of words per entry: " << min_words << " words in " << min_count << " entries." << std::endl;
+    out << "Greatest quantity of words per entry: " << max_words << " words in " << max_count << " entries." << std::endl;
+
+    out << "Ideal average: " << ideal_average << std::endl;
+    out << "Standard deviation from the ideal: " << std_dev << std::endl;
 }
