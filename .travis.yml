@@ -1,0 +1,11 @@
+language: node_js
+node_js:
+  - "7"
+before_script:
+  - git submodule update --init --recursive
+  - git submodule foreach yarn
+  - git submodule foreach yarn build
+  - cd rts-game
+  - yarn
+script:
+  - yarn travis -s
