@@ -1,5 +1,6 @@
 ﻿import { State, StateStatusT } from './state';
 import { PathfindState } from './pathfind-state';
+import { NeutralState } from './neutral-state';
 import { StateMachine } from './state-machine';
 import { CollectResourceState } from './collect-resource-state';
 import { Enemy } from '../enemy';
@@ -13,9 +14,6 @@ export class ExploreState extends PathfindState {
     get stateName() {
         return 'exploring';
     }
-    get stateStatus(): StateStatusT {
-        return 'ok';
-    }
 
     tick(machine: StateMachine, delta: number) {
         let controller = this.self.controller;
@@ -27,7 +25,9 @@ export class ExploreState extends PathfindState {
             let tile = controller.getTileAt(targetx, targety);
             if (!controller.isInFOW(targetx, targety)) {
                 if (tile == tiles['treasure']) {
-                    machine.currentState = new CollectResourceState(this.self, targetx, targety);
+                    let newState = new CollectResourceState(this.self, targetx, targety);
+                    if (machine.currentState instanceof NeutralState) machine.currentState.substate = newState;
+                    else machine.currentState = newState;
                     return;
                 }
                 else if (!this.path && !tile.isSolid && (

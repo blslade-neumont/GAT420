@@ -35,7 +35,7 @@ export class FlockingScene extends GameScene {
         this.addObject(batController);
         batController.addBats(1000);
 
-        let enemyController = new EnemyController(this._world);
+        let enemyController = new EnemyController(this._world, player);
         this.addObject(enemyController);
 
         let debugControls = new DebugControls();

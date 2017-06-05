@@ -63,7 +63,7 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 35);
+/******/ 	return __webpack_require__(__webpack_require__.s = 41);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -72,21 +72,8 @@
 
 "use strict";
 
-function __export(m) {
-    for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
-}
 Object.defineProperty(exports, "__esModule", { value: true });
-__export(__webpack_require__(18));
-
-
-/***/ }),
-/* 1 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-var merge = __webpack_require__(4);
+var merge = __webpack_require__(8);
 exports.TILE_SIZE = 48;
 ;
 exports.tiles = {
@@ -131,6 +118,19 @@ addDecorationTiles('water', 4, {
     },
     isSolid: true
 });
+
+
+/***/ }),
+/* 1 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+function __export(m) {
+    for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
+}
+Object.defineProperty(exports, "__esModule", { value: true });
+__export(__webpack_require__(26));
 
 
 /***/ }),
@@ -250,6 +250,282 @@ exports.alives = {
 
 /***/ }),
 /* 4 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+var pathfind_state_1 = __webpack_require__(5);
+var neutral_state_1 = __webpack_require__(11);
+var collect_resource_state_1 = __webpack_require__(35);
+var tile_db_1 = __webpack_require__(0);
+var ExploreState = (function (_super) {
+    __extends(ExploreState, _super);
+    function ExploreState(self) {
+        return _super.call(this, self, 30 * (2 + Math.random() * 1)) || this;
+    }
+    Object.defineProperty(ExploreState.prototype, "stateName", {
+        get: function () {
+            return 'exploring';
+        },
+        enumerable: true,
+        configurable: true
+    });
+    ExploreState.prototype.tick = function (machine, delta) {
+        var controller = this.self.controller;
+        var found = false;
+        for (var q = 10; q < 100; q++) {
+            var size = tile_db_1.TILE_SIZE * Math.sqrt(q);
+            var targetx = Math.floor((this.self.x - size + (size * 2 * Math.random())) / tile_db_1.TILE_SIZE);
+            var targety = Math.floor((this.self.y - size + (size * 2 * Math.random())) / tile_db_1.TILE_SIZE);
+            var tile = controller.getTileAt(targetx, targety);
+            if (!controller.isInFOW(targetx, targety)) {
+                if (tile == tile_db_1.tiles['treasure']) {
+                    var newState = new collect_resource_state_1.CollectResourceState(this.self, targetx, targety);
+                    if (machine.currentState instanceof neutral_state_1.NeutralState)
+                        machine.currentState.substate = newState;
+                    else
+                        machine.currentState = newState;
+                    return;
+                }
+                else if (!this.path && !tile.isSolid && (controller.isInFOW(targetx + 1, targety) ||
+                    controller.isInFOW(targetx - 1, targety) ||
+                    controller.isInFOW(targetx, targety + 1) ||
+                    controller.isInFOW(targetx, targety - 1))) {
+                    found = this.findPath(targetx, targety);
+                }
+            }
+        }
+        if (!this.path && !found) {
+            var targetx = Math.floor((this.self.x + (Math.random() * 3000) - 1500) / tile_db_1.TILE_SIZE);
+            var targety = Math.floor((this.self.y + (Math.random() * 3000) - 1500) / tile_db_1.TILE_SIZE);
+            this.findPath(targetx, targety);
+        }
+        _super.prototype.tick.call(this, machine, delta);
+    };
+    return ExploreState;
+}(pathfind_state_1.PathfindState));
+exports.ExploreState = ExploreState;
+
+
+/***/ }),
+/* 5 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+var engine_1 = __webpack_require__(1);
+var state_1 = __webpack_require__(6);
+var path_1 = __webpack_require__(18);
+var tile_db_1 = __webpack_require__(0);
+var math_1 = __webpack_require__(7);
+var PathfindState = (function (_super) {
+    __extends(PathfindState, _super);
+    function PathfindState(self, targetSpeed, canSeeFOW, arrive) {
+        if (canSeeFOW === void 0) { canSeeFOW = false; }
+        if (arrive === void 0) { arrive = false; }
+        var _this = _super.call(this, self) || this;
+        _this.targetSpeed = targetSpeed;
+        _this.canSeeFOW = canSeeFOW;
+        _this.arrive = arrive;
+        _this.findNeighborsFn = null;
+        _this.currentIdx = 0;
+        _this.turnRadius = 30;
+        _this.directionChangeSpeed = 180;
+        _this.directionTolerance = 15;
+        if (!canSeeFOW)
+            _this.findNeighborsFn = _this.findNeighborsFOW.bind(_this);
+        return _this;
+    }
+    PathfindState.prototype.findNeighborsFOW = function (node) {
+        var _this = this;
+        return node.neighbors
+            .filter(function (n) { return !_this.self.controller.isInFOW(n.x, n.y); })
+            .map(function (n) { return [n, path_1.Path.actualDistance(node, n)]; });
+    };
+    Object.defineProperty(PathfindState.prototype, "path", {
+        get: function () {
+            return this._path;
+        },
+        set: function (val) {
+            this._path = val;
+            this.currentIdx = 0;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    PathfindState.prototype.findPath = function (tox, toy, allowPartial) {
+        if (allowPartial === void 0) { allowPartial = false; }
+        var path = this.self.controller.getPath(Math.floor(this.self.x / tile_db_1.TILE_SIZE), Math.floor(this.self.y / tile_db_1.TILE_SIZE), tox, toy, this.findNeighborsFn, allowPartial);
+        if (!path)
+            return false;
+        this.path = path;
+        return true;
+    };
+    PathfindState.prototype.onCompletedPath = function () { };
+    PathfindState.prototype.tick = function (machine, delta) {
+        if (!this.path || (this.arrive && this.currentIdx == this.path.nodes.length - 1)) {
+            this.self.speed += -this.self.speed * (1 - Math.pow(1 - delta, 2));
+            if (this.path) {
+                this.onCompletedPath();
+                this.path = null;
+            }
+            return;
+        }
+        else {
+            this.self.speed += (this.targetSpeed - this.self.speed) * (1 - Math.pow(1 - delta, 2));
+        }
+        var nodes = this.path.nodes;
+        var targeting = null;
+        while (true) {
+            if (this.currentIdx >= nodes.length) {
+                this.onCompletedPath();
+                this.path = null;
+                return;
+            }
+            targeting = nodes[this.currentIdx];
+            var dist2 = math_1.pointDistance2(this.self.x, this.self.y, (targeting.x + .5) * tile_db_1.TILE_SIZE, (targeting.y + .5) * tile_db_1.TILE_SIZE);
+            if (dist2 > this.turnRadius * this.turnRadius || (this.arrive && this.currentIdx == nodes.length - 1 && dist2 > 4))
+                break;
+            this.currentIdx++;
+        }
+        var dir = engine_1.pointDirection(this.self.x, this.self.y, (targeting.x + .5) * tile_db_1.TILE_SIZE, (targeting.y + .5) * tile_db_1.TILE_SIZE);
+        if (dir > this.self.direction + 180)
+            dir -= 360;
+        else if (dir < this.self.direction - 180)
+            dir += 360;
+        var dirChange = 0;
+        if (dir > this.self.direction + this.directionTolerance) {
+            dirChange = Math.min(dir - this.self.direction, this.directionChangeSpeed * delta);
+        }
+        else if (dir < this.self.direction - this.directionTolerance) {
+            dirChange = Math.max(dir - this.self.direction, -this.directionChangeSpeed * delta);
+        }
+        this.self.direction += dirChange;
+    };
+    PathfindState.prototype.render = function (machine, context) {
+        _super.prototype.render.call(this, machine, context);
+        if (this.path && this.self.renderDebugInfo) {
+            context.strokeStyle = 'red';
+            context.beginPath();
+            var nodes = this.path.nodes;
+            context.moveTo((nodes[0].x + .5) * tile_db_1.TILE_SIZE, (nodes[0].y + .5) * tile_db_1.TILE_SIZE);
+            for (var q = 1; q < nodes.length; q++) {
+                context.lineTo((nodes[q].x + .5) * tile_db_1.TILE_SIZE, (nodes[q].y + .5) * tile_db_1.TILE_SIZE);
+            }
+            context.stroke();
+            for (var q = 0; q < nodes.length; q++) {
+                context.fillStyle = q == this.currentIdx ? 'white' : 'red';
+                context.fillRect((nodes[q].x + .5) * tile_db_1.TILE_SIZE - 2, (nodes[q].y + .5) * tile_db_1.TILE_SIZE - 2, 4, 4);
+            }
+            context.strokeStyle = 'blue';
+            context.beginPath();
+            context.ellipse(this.self.x, this.self.y, this.turnRadius, this.turnRadius, 0, 0, 2 * Math.PI);
+            context.stroke();
+        }
+    };
+    return PathfindState;
+}(state_1.State));
+exports.PathfindState = PathfindState;
+
+
+/***/ }),
+/* 6 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var State = (function () {
+    function State(self) {
+        this.self = self;
+    }
+    Object.defineProperty(State.prototype, "renderDebugInfo", {
+        get: function () {
+            return this.self.renderDebugInfo;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(State.prototype, "stateStatus", {
+        get: function () {
+            return 'ok';
+        },
+        enumerable: true,
+        configurable: true
+    });
+    State.prototype.onEnter = function (machine, previousState) {
+    };
+    State.prototype.onExit = function (machine, nextState) {
+    };
+    State.prototype.tick = function (machine, delta) {
+    };
+    State.prototype.render = function (machine, context) {
+        if (!this.renderDebugInfo)
+            return;
+        context.fillStyle = this.stateStatus == 'ok' ? 'white' :
+            this.stateStatus == 'error' ? 'red' :
+                this.stateStatus == 'alert' ? 'orange' :
+                    this.stateStatus == 'confused' ? 'yellow' :
+                        'purple';
+        var text = this.stateStatus == 'ok' ? 'OK' :
+            this.stateStatus == 'error' ? 'ERR' :
+                this.stateStatus == 'alert' ? '!' :
+                    this.stateStatus == 'confused' ? '?' :
+                        this.stateStatus;
+        context.textAlign = 'right';
+        context.textBaseline = 'bottom';
+        context.fillText(text, this.self.x - 4, this.self.y - 24);
+        context.fillStyle = 'white';
+        context.textAlign = 'left';
+        context.textBaseline = 'bottom';
+        context.fillText('- ' + this.stateName, this.self.x, this.self.y - 24);
+    };
+    return State;
+}());
+exports.State = State;
+
+
+/***/ }),
+/* 7 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+function pointDistance2(x1, y1, x2, y2) {
+    return Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2);
+}
+exports.pointDistance2 = pointDistance2;
+function pointDistance(x1, y1, x2, y2) {
+    return Math.sqrt(pointDistance2(x1, y1, x2, y2));
+}
+exports.pointDistance = pointDistance;
+
+
+/***/ }),
+/* 8 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* WEBPACK VAR INJECTION */(function(global, module) {/**
@@ -2460,10 +2736,10 @@ function stubFalse() {
 
 module.exports = merge;
 
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(43), __webpack_require__(44)(module)))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(49), __webpack_require__(50)(module)))
 
 /***/ }),
-/* 5 */
+/* 9 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2606,13 +2882,13 @@ exports.Camera = Camera;
 //# sourceMappingURL=camera.js.map
 
 /***/ }),
-/* 6 */
+/* 10 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var sprite_1 = __webpack_require__(12);
+var sprite_1 = __webpack_require__(17);
 var math_1 = __webpack_require__(2);
 var LINE_HEIGHT = 12;
 function fillText(context, text, x, y) {
@@ -2670,24 +2946,139 @@ exports.measureSprite = measureSprite;
 //# sourceMappingURL=render.js.map
 
 /***/ }),
-/* 7 */
+/* 11 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
-function pointDistance2(x1, y1, x2, y2) {
-    return Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2);
-}
-exports.pointDistance2 = pointDistance2;
-function pointDistance(x1, y1, x2, y2) {
-    return Math.sqrt(pointDistance2(x1, y1, x2, y2));
-}
-exports.pointDistance = pointDistance;
+var state_1 = __webpack_require__(6);
+var explore_state_1 = __webpack_require__(4);
+var flee_state_1 = __webpack_require__(20);
+var attack_state_1 = __webpack_require__(19);
+var return_to_base_state_1 = __webpack_require__(12);
+var NeutralState = (function (_super) {
+    __extends(NeutralState, _super);
+    function NeutralState(self, substate) {
+        if (substate === void 0) { substate = new explore_state_1.ExploreState(self); }
+        var _this = _super.call(this, self) || this;
+        _this.substate = substate;
+        return _this;
+    }
+    Object.defineProperty(NeutralState.prototype, "stateStatus", {
+        get: function () {
+            return 'ok';
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(NeutralState.prototype, "stateName", {
+        get: function () {
+            return (this.substate && this.substate.stateName) || 'neutral';
+        },
+        enumerable: true,
+        configurable: true
+    });
+    NeutralState.prototype.tick = function (states, delta) {
+        var controller = this.self.controller;
+        if (controller.canSeePlayer && this.self.canSeePlayer) {
+            if (controller.afraidOfPlayer) {
+                states.currentState = new flee_state_1.FleeState(this.self);
+                return;
+            }
+            else {
+                states.currentState = new attack_state_1.AttackState(this.self);
+                return;
+            }
+        }
+        if (this.self.hasResource && !(this.substate instanceof return_to_base_state_1.ReturnToBaseState)) {
+            this.substate = new return_to_base_state_1.ReturnToBaseState(this.self);
+            return;
+        }
+        _super.prototype.tick.call(this, states, delta);
+        if (this.substate)
+            this.substate.tick(states, delta);
+    };
+    NeutralState.prototype.render = function (states, context) {
+        _super.prototype.render.call(this, states, context);
+        if (this.substate)
+            this.substate.render(states, context);
+    };
+    return NeutralState;
+}(state_1.State));
+exports.NeutralState = NeutralState;
 
 
 /***/ }),
-/* 8 */
+/* 12 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+var pathfind_state_1 = __webpack_require__(5);
+var neutral_state_1 = __webpack_require__(11);
+var explore_state_1 = __webpack_require__(4);
+var tile_db_1 = __webpack_require__(0);
+var ReturnToBaseState = (function (_super) {
+    __extends(ReturnToBaseState, _super);
+    function ReturnToBaseState(self) {
+        return _super.call(this, self, 30 * (2 + Math.random() * 1), false, true) || this;
+    }
+    Object.defineProperty(ReturnToBaseState.prototype, "stateName", {
+        get: function () {
+            return 'returning';
+        },
+        enumerable: true,
+        configurable: true
+    });
+    ReturnToBaseState.prototype.onCompletedPath = function () {
+        if (this.self.controller.baseCoords[0] + 1 - Math.floor(this.self.x / tile_db_1.TILE_SIZE) <= 1 && this.self.controller.baseCoords[1] + 1 - Math.floor(this.self.y / tile_db_1.TILE_SIZE) <= 1) {
+            if (this.self.hasResource) {
+                this.self.controller.treasureCollected++;
+                this.self.hasResource = false;
+            }
+            var newState = new explore_state_1.ExploreState(this.self);
+            var machine = this.self.states;
+            if (machine.currentState instanceof neutral_state_1.NeutralState)
+                machine.currentState.substate = newState;
+            else
+                machine.currentState = newState;
+        }
+    };
+    ReturnToBaseState.prototype.tick = function (states, delta) {
+        if (!this.path) {
+            this.findPath(this.self.controller.baseCoords[0] + 1, this.self.controller.baseCoords[1] + 1, true);
+        }
+        _super.prototype.tick.call(this, states, delta);
+    };
+    return ReturnToBaseState;
+}(pathfind_state_1.PathfindState));
+exports.ReturnToBaseState = ReturnToBaseState;
+
+
+/***/ }),
+/* 13 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2864,15 +3255,15 @@ exports.EventQueue = EventQueue;
 //# sourceMappingURL=event-queue.js.map
 
 /***/ }),
-/* 9 */
+/* 14 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var math_1 = __webpack_require__(2);
-var rect_1 = __webpack_require__(11);
-var render_1 = __webpack_require__(6);
+var rect_1 = __webpack_require__(16);
+var render_1 = __webpack_require__(10);
 ;
 var GameObject = (function () {
     function GameObject(name, opts) {
@@ -3206,13 +3597,13 @@ exports.GameObject = GameObject;
 //# sourceMappingURL=game-object.js.map
 
 /***/ }),
-/* 10 */
+/* 15 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var render_1 = __webpack_require__(6);
+var render_1 = __webpack_require__(10);
 var ResourceLoader = (function () {
     function ResourceLoader() {
         this.DEBUG_RESOURCES = false;
@@ -3333,7 +3724,7 @@ exports.ResourceLoader = ResourceLoader;
 //# sourceMappingURL=resource-loader.js.map
 
 /***/ }),
-/* 11 */
+/* 16 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3368,7 +3759,7 @@ exports.Rect = Rect;
 //# sourceMappingURL=rect.js.map
 
 /***/ }),
-/* 12 */
+/* 17 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3385,7 +3776,108 @@ exports.isAnimationSprite = isAnimationSprite;
 //# sourceMappingURL=sprite.js.map
 
 /***/ }),
-/* 13 */
+/* 18 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var Path = (function () {
+    function Path(nodes, cost) {
+        this.nodes = nodes;
+        this.cost = cost;
+    }
+    Path.heuristicDistance = function (fromNode, toNode) {
+        return this.actualDistance(fromNode, toNode);
+    };
+    Path.actualDistance = function (fromNode, toNode) {
+        var xdiff = fromNode.x - toNode.x;
+        var ydiff = fromNode.y - toNode.y;
+        return Math.sqrt(xdiff * xdiff + ydiff * ydiff);
+    };
+    Path.defaultFindNeighbors = function (fromNode) {
+        return fromNode.neighbors.map(function (n) { return [n, Path.actualDistance(fromNode, n)]; });
+    };
+    Path.pathfind = function (fromNode, toNode, findNeighbors, allowPartial) {
+        if (findNeighbors === void 0) { findNeighbors = null; }
+        if (allowPartial === void 0) { allowPartial = false; }
+        if (!findNeighbors)
+            findNeighbors = Path.defaultFindNeighbors;
+        var checkedNodes = new Set();
+        var toCheck = new Set();
+        toCheck.add(fromNode);
+        var cameFrom = new Map();
+        var gScores = new Map();
+        gScores.set(fromNode, 0);
+        var fScores = new Map();
+        fScores.set(fromNode, Path.heuristicDistance(fromNode, toNode));
+        var _loop_1 = function () {
+            var currentFScore = Infinity;
+            var current = null;
+            toCheck.forEach(function (node) {
+                var fScore;
+                if (!fScores.has(node))
+                    fScore = Infinity;
+                else
+                    fScore = fScores.get(node);
+                if (fScore < currentFScore) {
+                    currentFScore = fScore;
+                    current = node;
+                }
+            });
+            if (current == toNode)
+                return { value: new Path(Path.reconstructPath(cameFrom, current), gScores.get(current)) };
+            toCheck.delete(current);
+            checkedNodes.add(current);
+            for (var _i = 0, _a = findNeighbors(current); _i < _a.length; _i++) {
+                var _b = _a[_i], conn = _b[0], cost = _b[1];
+                if (checkedNodes.has(conn))
+                    continue;
+                tentativeGScore = gScores.get(current) + cost;
+                if (!toCheck.has(conn))
+                    toCheck.add(conn);
+                else if (gScores.has(conn) && tentativeGScore >= gScores.get(conn))
+                    continue;
+                cameFrom.set(conn, current);
+                gScores.set(conn, tentativeGScore);
+                fScores.set(conn, tentativeGScore + Path.heuristicDistance(conn, toNode));
+            }
+        };
+        var tentativeGScore;
+        while (toCheck.size != 0 && toCheck.size < Path.MAX_CHECK) {
+            var state_1 = _loop_1();
+            if (typeof state_1 === "object")
+                return state_1.value;
+        }
+        if (allowPartial) {
+            var bestDistance_1 = Infinity;
+            var bestNode_1 = null;
+            checkedNodes.forEach(function (node) {
+                var dist = Path.heuristicDistance(node, toNode);
+                if (dist < bestDistance_1) {
+                    bestDistance_1 = dist;
+                    bestNode_1 = node;
+                }
+            });
+            if (bestNode_1 && bestNode_1 !== fromNode)
+                return new Path(Path.reconstructPath(cameFrom, bestNode_1), gScores.get(bestNode_1));
+        }
+        return null;
+    };
+    Path.reconstructPath = function (cameFrom, current) {
+        var completePath = [current];
+        while (cameFrom.has(current) && (current = cameFrom.get(current)) != null)
+            completePath.unshift(current);
+        return completePath;
+    };
+    return Path;
+}());
+Path.MAX_CHECK = 250;
+exports.Path = Path;
+
+
+/***/ }),
+/* 19 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3401,10 +3893,142 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-var engine_1 = __webpack_require__(0);
-var tile_preload_strategy_1 = __webpack_require__(38);
-var alive_preload_strategy_1 = __webpack_require__(37);
-var flocking_scene_1 = __webpack_require__(39);
+var state_1 = __webpack_require__(6);
+var neutral_state_1 = __webpack_require__(11);
+var flee_state_1 = __webpack_require__(20);
+var AttackState = (function (_super) {
+    __extends(AttackState, _super);
+    function AttackState(self, substate) {
+        if (substate === void 0) { substate = null; }
+        var _this = _super.call(this, self) || this;
+        _this.substate = substate;
+        return _this;
+    }
+    Object.defineProperty(AttackState.prototype, "stateStatus", {
+        get: function () {
+            return 'alert';
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(AttackState.prototype, "stateName", {
+        get: function () {
+            return (this.substate && this.substate.stateName) || 'attack';
+        },
+        enumerable: true,
+        configurable: true
+    });
+    AttackState.prototype.tick = function (states, delta) {
+        var controller = this.self.controller;
+        if (!controller.canSeePlayer || (!this.self.canSeePlayer && !this.substate)) {
+            states.currentState = new neutral_state_1.NeutralState(this.self);
+            return;
+        }
+        else if (controller.afraidOfPlayer) {
+            states.currentState = new flee_state_1.FleeState(this.self);
+            return;
+        }
+        _super.prototype.tick.call(this, states, delta);
+        if (this.substate)
+            this.substate.tick(states, delta);
+    };
+    AttackState.prototype.render = function (states, context) {
+        _super.prototype.render.call(this, states, context);
+        if (this.substate)
+            this.substate.render(states, context);
+    };
+    return AttackState;
+}(state_1.State));
+exports.AttackState = AttackState;
+
+
+/***/ }),
+/* 20 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+var state_1 = __webpack_require__(6);
+var neutral_state_1 = __webpack_require__(11);
+var attack_state_1 = __webpack_require__(19);
+var FleeState = (function (_super) {
+    __extends(FleeState, _super);
+    function FleeState(self, substate) {
+        if (substate === void 0) { substate = null; }
+        var _this = _super.call(this, self) || this;
+        _this.substate = substate;
+        return _this;
+    }
+    Object.defineProperty(FleeState.prototype, "stateStatus", {
+        get: function () {
+            return 'scared';
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(FleeState.prototype, "stateName", {
+        get: function () {
+            return (this.substate && this.substate.stateName) || 'flee';
+        },
+        enumerable: true,
+        configurable: true
+    });
+    FleeState.prototype.tick = function (states, delta) {
+        var controller = this.self.controller;
+        if (!controller.canSeePlayer || !this.self.canSeePlayer) {
+            states.currentState = new neutral_state_1.NeutralState(this.self);
+            return;
+        }
+        else if (!controller.afraidOfPlayer) {
+            states.currentState = new attack_state_1.AttackState(this.self);
+            return;
+        }
+        _super.prototype.tick.call(this, states, delta);
+        if (this.substate)
+            this.substate.tick(states, delta);
+    };
+    FleeState.prototype.render = function (states, context) {
+        _super.prototype.render.call(this, states, context);
+        if (this.substate)
+            this.substate.render(states, context);
+    };
+    return FleeState;
+}(state_1.State));
+exports.FleeState = FleeState;
+
+
+/***/ }),
+/* 21 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+var engine_1 = __webpack_require__(1);
+var tile_preload_strategy_1 = __webpack_require__(44);
+var alive_preload_strategy_1 = __webpack_require__(43);
+var flocking_scene_1 = __webpack_require__(45);
 var RtsGame = (function (_super) {
     __extends(RtsGame, _super);
     function RtsGame(framesPerSecond) {
@@ -3424,7 +4048,7 @@ exports.RtsGame = RtsGame;
 
 
 /***/ }),
-/* 14 */
+/* 22 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3440,8 +4064,8 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-var game_object_1 = __webpack_require__(9);
-var merge = __webpack_require__(4);
+var game_object_1 = __webpack_require__(14);
+var merge = __webpack_require__(8);
 var AudioSourceObject = (function (_super) {
     __extends(AudioSourceObject, _super);
     function AudioSourceObject(name, audio, opts) {
@@ -3498,7 +4122,7 @@ exports.AudioSourceObject = AudioSourceObject;
 //# sourceMappingURL=audio-source-object.js.map
 
 /***/ }),
-/* 15 */
+/* 23 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3514,7 +4138,7 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-var camera_1 = __webpack_require__(5);
+var camera_1 = __webpack_require__(9);
 var FollowCamera = (function (_super) {
     __extends(FollowCamera, _super);
     function FollowCamera(scene) {
@@ -3557,13 +4181,13 @@ exports.FollowCamera = FollowCamera;
 //# sourceMappingURL=follow-camera.js.map
 
 /***/ }),
-/* 16 */
+/* 24 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var camera_1 = __webpack_require__(5);
+var camera_1 = __webpack_require__(9);
 var GameScene = (function () {
     function GameScene(_game) {
         if (_game === void 0) { _game = null; }
@@ -3691,14 +4315,14 @@ exports.GameScene = GameScene;
 //# sourceMappingURL=game-scene.js.map
 
 /***/ }),
-/* 17 */
+/* 25 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var resource_loader_1 = __webpack_require__(10);
-var event_queue_1 = __webpack_require__(8);
+var resource_loader_1 = __webpack_require__(15);
+var event_queue_1 = __webpack_require__(13);
 var Game = (function () {
     function Game(framesPerSecond) {
         if (framesPerSecond === void 0) { framesPerSecond = 30; }
@@ -3861,7 +4485,7 @@ exports.Game = Game;
 //# sourceMappingURL=game.js.map
 
 /***/ }),
-/* 18 */
+/* 26 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3870,19 +4494,19 @@ function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 Object.defineProperty(exports, "__esModule", { value: true });
-__export(__webpack_require__(8));
-__export(__webpack_require__(10));
-__export(__webpack_require__(5));
+__export(__webpack_require__(13));
 __export(__webpack_require__(15));
-__export(__webpack_require__(17));
 __export(__webpack_require__(9));
+__export(__webpack_require__(23));
+__export(__webpack_require__(25));
 __export(__webpack_require__(14));
-__export(__webpack_require__(16));
 __export(__webpack_require__(22));
+__export(__webpack_require__(24));
+__export(__webpack_require__(30));
 //# sourceMappingURL=index.js.map
 
 /***/ }),
-/* 19 */
+/* 27 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3897,7 +4521,7 @@ exports.delay = delay;
 //# sourceMappingURL=delay.js.map
 
 /***/ }),
-/* 20 */
+/* 28 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3929,7 +4553,7 @@ exports.EventEmitter = EventEmitter;
 //# sourceMappingURL=event-emitter.js.map
 
 /***/ }),
-/* 21 */
+/* 29 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3946,7 +4570,7 @@ var MouseButton;
 //# sourceMappingURL=events.js.map
 
 /***/ }),
-/* 22 */
+/* 30 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3955,17 +4579,17 @@ function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 Object.defineProperty(exports, "__esModule", { value: true });
-__export(__webpack_require__(19));
-__export(__webpack_require__(20));
-__export(__webpack_require__(21));
+__export(__webpack_require__(27));
+__export(__webpack_require__(28));
+__export(__webpack_require__(29));
 __export(__webpack_require__(2));
-__export(__webpack_require__(11));
-__export(__webpack_require__(6));
-__export(__webpack_require__(12));
+__export(__webpack_require__(16));
+__export(__webpack_require__(10));
+__export(__webpack_require__(17));
 //# sourceMappingURL=index.js.map
 
 /***/ }),
-/* 23 */
+/* 31 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3981,7 +4605,7 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-var engine_1 = __webpack_require__(0);
+var engine_1 = __webpack_require__(1);
 var DebugControls = (function (_super) {
     __extends(DebugControls, _super);
     function DebugControls() {
@@ -4015,7 +4639,7 @@ exports.DebugControls = DebugControls;
 
 
 /***/ }),
-/* 24 */
+/* 32 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4031,21 +4655,23 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-var engine_1 = __webpack_require__(0);
-var enemy_1 = __webpack_require__(25);
-var tile_db_1 = __webpack_require__(1);
-var node_1 = __webpack_require__(26);
-var path_1 = __webpack_require__(27);
+var engine_1 = __webpack_require__(1);
+var enemy_1 = __webpack_require__(33);
+var tile_db_1 = __webpack_require__(0);
+var node_1 = __webpack_require__(34);
+var path_1 = __webpack_require__(18);
 var math_1 = __webpack_require__(7);
-var wander_state_1 = __webpack_require__(46);
-var explore_state_1 = __webpack_require__(28);
-var return_to_base_state_1 = __webpack_require__(45);
+var neutral_state_1 = __webpack_require__(11);
+var wander_state_1 = __webpack_require__(37);
+var explore_state_1 = __webpack_require__(4);
+var return_to_base_state_1 = __webpack_require__(12);
 var FOW_BUCKET_SIZE = 8;
 var EnemyController = (function (_super) {
     __extends(EnemyController, _super);
-    function EnemyController(world) {
+    function EnemyController(world, player) {
         var _this = _super.call(this, 'EnemyController') || this;
         _this.world = world;
+        _this.player = player;
         _this._baseCoords = [0, 0];
         _this._enemies = [];
         _this.treasureCollected = 0;
@@ -4054,9 +4680,10 @@ var EnemyController = (function (_super) {
         _this.renderMode = 'all';
         _this.renderFogOfWar = true;
         _this.keyStates = {
-            'Digit1': wander_state_1.WanderState,
-            'Digit2': explore_state_1.ExploreState,
-            'Digit3': return_to_base_state_1.ReturnToBaseState,
+            'Digit1': neutral_state_1.NeutralState,
+            'Digit2': wander_state_1.WanderState,
+            'Digit3': explore_state_1.ExploreState,
+            'Digit4': return_to_base_state_1.ReturnToBaseState
         };
         _this._fowBuckets = new Map();
         _this.nodeMap = new Map();
@@ -4081,7 +4708,7 @@ var EnemyController = (function (_super) {
     };
     EnemyController.prototype.addToScene = function (scene) {
         _super.prototype.addToScene.call(this, scene);
-        this.addEnemies(10);
+        this.addEnemies(1);
     };
     Object.defineProperty(EnemyController.prototype, "debugControls", {
         get: function () {
@@ -4260,7 +4887,7 @@ exports.EnemyController = EnemyController;
 
 
 /***/ }),
-/* 25 */
+/* 33 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4275,13 +4902,41 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+var __generator = (this && this.__generator) || function (thisArg, body) {
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
+    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    function verb(n) { return function (v) { return step([n, v]); }; }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while (_) try {
+            if (f = 1, y && (t = y[op[0] & 2 ? "return" : op[0] ? "throw" : "next"]) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [0, t.value];
+            switch (op[0]) {
+                case 0: case 1: t = op; break;
+                case 4: _.label++; return { value: op[1], done: false };
+                case 5: _.label++; y = op[1]; op = [0]; continue;
+                case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop(); continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+    }
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-var engine_1 = __webpack_require__(0);
-var state_machine_1 = __webpack_require__(30);
-var explore_state_1 = __webpack_require__(28);
+var engine_1 = __webpack_require__(1);
+var state_machine_1 = __webpack_require__(36);
+var neutral_state_1 = __webpack_require__(11);
 var alive_db_1 = __webpack_require__(3);
-var tile_db_1 = __webpack_require__(1);
-var merge = __webpack_require__(4);
+var tile_db_1 = __webpack_require__(0);
+var merge = __webpack_require__(8);
+var math_1 = __webpack_require__(7);
 var FOW_CLEAR_RESET_TIME = .5;
 var Enemy = (function (_super) {
     __extends(Enemy, _super);
@@ -4293,9 +4948,13 @@ var Enemy = (function (_super) {
         }, opts)) || this;
         _this.controller = controller;
         _this.renderDebugInfo = false;
+        _this.hasResource = false;
+        _this.cachedCanSeePlayer = false;
+        _this.recomputeLineOfSight = 0;
+        _this.playerLineOfSight = [];
         _this._fowClearTime = Math.random() * FOW_CLEAR_RESET_TIME;
         _this.fowClearDistance = 4;
-        _this._states = new state_machine_1.StateMachine(new explore_state_1.ExploreState(_this));
+        _this._states = new state_machine_1.StateMachine(new neutral_state_1.NeutralState(_this));
         return _this;
     }
     Object.defineProperty(Enemy.prototype, "states", {
@@ -4305,12 +4964,73 @@ var Enemy = (function (_super) {
         enumerable: true,
         configurable: true
     });
+    Object.defineProperty(Enemy.prototype, "player", {
+        get: function () {
+            return this.controller.player;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Enemy.prototype, "canSeePlayer", {
+        get: function () {
+            if (this.recomputeLineOfSight <= 0) {
+                _a = this.hasLineOfSight(this.player.x + 16, this.player.y + 16), this.cachedCanSeePlayer = _a[0], this.playerLineOfSight = _a[1];
+                this.recomputeLineOfSight = .5;
+            }
+            return this.cachedCanSeePlayer;
+            var _a;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Enemy.prototype.hasLineOfSight = function (otherx, othery, maxDist) {
+        if (maxDist === void 0) { maxDist = Infinity; }
+        if (maxDist != Infinity) {
+            if (math_1.pointDistance2(this.x, this.y, otherx, othery) > maxDist * maxDist)
+                return [false, []];
+        }
+        var tiles = this.tilesInTheWay(this.x, this.y, otherx, othery);
+        var los = [];
+        while (true) {
+            var next = tiles.next();
+            if (next.done)
+                break;
+            los.push(next.value);
+            if (this.controller.isInFOW(next.value[0], next.value[1]))
+                return [false, los];
+        }
+        return [true, los];
+    };
+    Enemy.prototype.tilesInTheWay = function (x, y, otherx, othery) {
+        var dist, hunit, vunit, q;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    dist = 1 + math_1.pointDistance(x, y, otherx, othery) / tile_db_1.TILE_SIZE;
+                    hunit = (otherx - x) / dist;
+                    vunit = (othery - y) / dist;
+                    q = 0;
+                    _a.label = 1;
+                case 1:
+                    if (!(q <= dist)) return [3, 4];
+                    return [4, [Math.floor((x + (q * hunit)) / tile_db_1.TILE_SIZE), Math.floor((y + (q * vunit)) / tile_db_1.TILE_SIZE)]];
+                case 2:
+                    _a.sent();
+                    _a.label = 3;
+                case 3:
+                    q++;
+                    return [3, 1];
+                case 4: return [2];
+            }
+        });
+    };
     Enemy.prototype.tick = function (delta) {
         this._fowClearTime -= delta;
         if (this._fowClearTime <= 0) {
             this.controller.clearFOW(Math.floor(this.x / tile_db_1.TILE_SIZE), Math.floor(this.y / tile_db_1.TILE_SIZE), this.fowClearDistance);
             this._fowClearTime += FOW_CLEAR_RESET_TIME;
         }
+        this.recomputeLineOfSight -= delta;
         this._states.tick(delta);
         _super.prototype.tick.call(this, delta);
         this.imageAngle = this.direction;
@@ -4318,6 +5038,13 @@ var Enemy = (function (_super) {
     Enemy.prototype.render = function (context) {
         this._states.render(context);
         _super.prototype.render.call(this, context);
+        if (this.renderDebugInfo) {
+            context.fillStyle = 'rgba(1, 0, 0, .2)';
+            for (var _i = 0, _a = this.playerLineOfSight; _i < _a.length; _i++) {
+                var _b = _a[_i], x = _b[0], y = _b[1];
+                context.fillRect(x * tile_db_1.TILE_SIZE, y * tile_db_1.TILE_SIZE, tile_db_1.TILE_SIZE, tile_db_1.TILE_SIZE);
+            }
+        }
     };
     return Enemy;
 }(engine_1.GameObject));
@@ -4325,7 +5052,7 @@ exports.Enemy = Enemy;
 
 
 /***/ }),
-/* 26 */
+/* 34 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4381,108 +5108,7 @@ exports.Node = Node;
 
 
 /***/ }),
-/* 27 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-var Path = (function () {
-    function Path(nodes, cost) {
-        this.nodes = nodes;
-        this.cost = cost;
-    }
-    Path.heuristicDistance = function (fromNode, toNode) {
-        return this.actualDistance(fromNode, toNode);
-    };
-    Path.actualDistance = function (fromNode, toNode) {
-        var xdiff = fromNode.x - toNode.x;
-        var ydiff = fromNode.y - toNode.y;
-        return Math.sqrt(xdiff * xdiff + ydiff * ydiff);
-    };
-    Path.defaultFindNeighbors = function (fromNode) {
-        return fromNode.neighbors.map(function (n) { return [n, Path.actualDistance(fromNode, n)]; });
-    };
-    Path.pathfind = function (fromNode, toNode, findNeighbors, allowPartial) {
-        if (findNeighbors === void 0) { findNeighbors = null; }
-        if (allowPartial === void 0) { allowPartial = false; }
-        if (!findNeighbors)
-            findNeighbors = Path.defaultFindNeighbors;
-        var checkedNodes = new Set();
-        var toCheck = new Set();
-        toCheck.add(fromNode);
-        var cameFrom = new Map();
-        var gScores = new Map();
-        gScores.set(fromNode, 0);
-        var fScores = new Map();
-        fScores.set(fromNode, Path.heuristicDistance(fromNode, toNode));
-        var _loop_1 = function () {
-            var currentFScore = Infinity;
-            var current = null;
-            toCheck.forEach(function (node) {
-                var fScore;
-                if (!fScores.has(node))
-                    fScore = Infinity;
-                else
-                    fScore = fScores.get(node);
-                if (fScore < currentFScore) {
-                    currentFScore = fScore;
-                    current = node;
-                }
-            });
-            if (current == toNode)
-                return { value: new Path(Path.reconstructPath(cameFrom, current), gScores.get(current)) };
-            toCheck.delete(current);
-            checkedNodes.add(current);
-            for (var _i = 0, _a = findNeighbors(current); _i < _a.length; _i++) {
-                var _b = _a[_i], conn = _b[0], cost = _b[1];
-                if (checkedNodes.has(conn))
-                    continue;
-                tentativeGScore = gScores.get(current) + cost;
-                if (!toCheck.has(conn))
-                    toCheck.add(conn);
-                else if (gScores.has(conn) && tentativeGScore >= gScores.get(conn))
-                    continue;
-                cameFrom.set(conn, current);
-                gScores.set(conn, tentativeGScore);
-                fScores.set(conn, tentativeGScore + Path.heuristicDistance(conn, toNode));
-            }
-        };
-        var tentativeGScore;
-        while (toCheck.size != 0 && toCheck.size < Path.MAX_CHECK) {
-            var state_1 = _loop_1();
-            if (typeof state_1 === "object")
-                return state_1.value;
-        }
-        if (allowPartial) {
-            var bestDistance_1 = Infinity;
-            var bestNode_1 = null;
-            checkedNodes.forEach(function (node) {
-                var dist = Path.heuristicDistance(node, toNode);
-                if (dist < bestDistance_1) {
-                    bestDistance_1 = dist;
-                    bestNode_1 = node;
-                }
-            });
-            if (bestNode_1 && bestNode_1 !== fromNode)
-                return new Path(Path.reconstructPath(cameFrom, bestNode_1), gScores.get(bestNode_1));
-        }
-        return null;
-    };
-    Path.reconstructPath = function (cameFrom, current) {
-        var completePath = [current];
-        while (cameFrom.has(current) && (current = cameFrom.get(current)) != null)
-            completePath.unshift(current);
-        return completePath;
-    };
-    return Path;
-}());
-Path.MAX_CHECK = 1000;
-exports.Path = Path;
-
-
-/***/ }),
-/* 28 */
+/* 35 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4498,195 +5124,63 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-var pathfind_state_1 = __webpack_require__(29);
-var collect_resource_state_1 = __webpack_require__(47);
-var tile_db_1 = __webpack_require__(1);
-var ExploreState = (function (_super) {
-    __extends(ExploreState, _super);
-    function ExploreState(self) {
-        return _super.call(this, self, 30 * (2 + Math.random() * 1)) || this;
-    }
-    Object.defineProperty(ExploreState.prototype, "stateName", {
-        get: function () {
-            return 'exploring';
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(ExploreState.prototype, "stateStatus", {
-        get: function () {
-            return 'ok';
-        },
-        enumerable: true,
-        configurable: true
-    });
-    ExploreState.prototype.tick = function (machine, delta) {
-        var controller = this.self.controller;
-        var found = false;
-        for (var q = 10; q < 100; q++) {
-            var size = tile_db_1.TILE_SIZE * Math.sqrt(q);
-            var targetx = Math.floor((this.self.x - size + (size * 2 * Math.random())) / tile_db_1.TILE_SIZE);
-            var targety = Math.floor((this.self.y - size + (size * 2 * Math.random())) / tile_db_1.TILE_SIZE);
-            var tile = controller.getTileAt(targetx, targety);
-            if (!controller.isInFOW(targetx, targety)) {
-                if (tile == tile_db_1.tiles['treasure']) {
-                    machine.currentState = new collect_resource_state_1.CollectResourceState(this.self, targetx, targety);
-                    return;
-                }
-                else if (!this.path && !tile.isSolid && (controller.isInFOW(targetx + 1, targety) ||
-                    controller.isInFOW(targetx - 1, targety) ||
-                    controller.isInFOW(targetx, targety + 1) ||
-                    controller.isInFOW(targetx, targety - 1))) {
-                    found = this.findPath(targetx, targety);
-                }
-            }
-        }
-        if (!this.path && !found) {
-            var targetx = Math.floor((this.self.x + (Math.random() * 3000) - 1500) / tile_db_1.TILE_SIZE);
-            var targety = Math.floor((this.self.y + (Math.random() * 3000) - 1500) / tile_db_1.TILE_SIZE);
-            this.findPath(targetx, targety);
-        }
-        _super.prototype.tick.call(this, machine, delta);
-    };
-    return ExploreState;
-}(pathfind_state_1.PathfindState));
-exports.ExploreState = ExploreState;
-
-
-/***/ }),
-/* 29 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-Object.defineProperty(exports, "__esModule", { value: true });
-var engine_1 = __webpack_require__(0);
-var state_1 = __webpack_require__(31);
-var path_1 = __webpack_require__(27);
-var tile_db_1 = __webpack_require__(1);
-var math_1 = __webpack_require__(7);
-var PathfindState = (function (_super) {
-    __extends(PathfindState, _super);
-    function PathfindState(self, targetSpeed, canSeeFOW, arrive) {
-        if (canSeeFOW === void 0) { canSeeFOW = false; }
-        if (arrive === void 0) { arrive = false; }
-        var _this = _super.call(this, self) || this;
-        _this.targetSpeed = targetSpeed;
-        _this.canSeeFOW = canSeeFOW;
-        _this.arrive = arrive;
-        _this.findNeighborsFn = null;
-        _this.currentIdx = 0;
-        _this.turnRadius = 30;
-        _this.directionChangeSpeed = 180;
-        _this.directionTolerance = 15;
-        if (!canSeeFOW)
-            _this.findNeighborsFn = _this.findNeighborsFOW.bind(_this);
+var pathfind_state_1 = __webpack_require__(5);
+var neutral_state_1 = __webpack_require__(11);
+var return_to_base_state_1 = __webpack_require__(12);
+var tile_db_1 = __webpack_require__(0);
+var CollectResourceState = (function (_super) {
+    __extends(CollectResourceState, _super);
+    function CollectResourceState(self, resourcex, resourcey) {
+        var _this = _super.call(this, self, 30 * (2 + Math.random() * 1), false, true) || this;
+        _this.resourcex = resourcex;
+        _this.resourcey = resourcey;
+        _this.collectingResource = 0;
+        _this.findPath(resourcex, resourcey);
+        _this.self.controller.setTileAt(resourcex, resourcey, tile_db_1.tiles['claimed-treasure']);
         return _this;
     }
-    PathfindState.prototype.findNeighborsFOW = function (node) {
-        var _this = this;
-        return node.neighbors
-            .filter(function (n) { return !_this.self.controller.isInFOW(n.x, n.y); })
-            .map(function (n) { return [n, path_1.Path.actualDistance(node, n)]; });
-    };
-    Object.defineProperty(PathfindState.prototype, "path", {
+    Object.defineProperty(CollectResourceState.prototype, "stateName", {
         get: function () {
-            return this._path;
-        },
-        set: function (val) {
-            this._path = val;
-            this.currentIdx = 0;
+            return 'foraging';
         },
         enumerable: true,
         configurable: true
     });
-    PathfindState.prototype.findPath = function (tox, toy, allowPartial) {
-        if (allowPartial === void 0) { allowPartial = false; }
-        var path = this.self.controller.getPath(Math.floor(this.self.x / tile_db_1.TILE_SIZE), Math.floor(this.self.y / tile_db_1.TILE_SIZE), tox, toy, this.findNeighborsFn, allowPartial);
-        if (!path)
-            return false;
-        this.path = path;
-        return true;
-    };
-    PathfindState.prototype.onCompletedPath = function () { };
-    PathfindState.prototype.tick = function (machine, delta) {
-        if (!this.path || (this.arrive && this.currentIdx == this.path.nodes.length - 1)) {
-            this.self.speed += -this.self.speed * (1 - Math.pow(1 - delta, 2));
-            if (this.path) {
-                this.onCompletedPath();
-                this.path = null;
+    CollectResourceState.prototype.tick = function (machine, delta) {
+        _super.prototype.tick.call(this, machine, delta);
+        if (!this.path) {
+            this.collectingResource += delta;
+            if (this.collectingResource > 1) {
+                this.self.controller.setTileAt(this.resourcex, this.resourcey, tile_db_1.tiles['depleted-treasure']);
+                this.self.hasResource = true;
+                var newState = new return_to_base_state_1.ReturnToBaseState(this.self);
+                if (machine.currentState instanceof neutral_state_1.NeutralState)
+                    machine.currentState.substate = newState;
+                else
+                    machine.currentState = newState;
             }
-            return;
-        }
-        else {
-            this.self.speed += (this.targetSpeed - this.self.speed) * (1 - Math.pow(1 - delta, 2));
-        }
-        var nodes = this.path.nodes;
-        var targeting = null;
-        while (true) {
-            if (this.currentIdx >= nodes.length) {
-                this.onCompletedPath();
-                this.path = null;
-                return;
-            }
-            targeting = nodes[this.currentIdx];
-            var dist2 = math_1.pointDistance2(this.self.x, this.self.y, (targeting.x + .5) * tile_db_1.TILE_SIZE, (targeting.y + .5) * tile_db_1.TILE_SIZE);
-            if (dist2 > this.turnRadius * this.turnRadius || (this.arrive && this.currentIdx == nodes.length - 1 && dist2 > 4))
-                break;
-            this.currentIdx++;
-        }
-        var dir = engine_1.pointDirection(this.self.x, this.self.y, (targeting.x + .5) * tile_db_1.TILE_SIZE, (targeting.y + .5) * tile_db_1.TILE_SIZE);
-        if (dir > this.self.direction + 180)
-            dir -= 360;
-        else if (dir < this.self.direction - 180)
-            dir += 360;
-        var dirChange = 0;
-        if (dir > this.self.direction + this.directionTolerance) {
-            dirChange = Math.min(dir - this.self.direction, this.directionChangeSpeed * delta);
-        }
-        else if (dir < this.self.direction - this.directionTolerance) {
-            dirChange = Math.max(dir - this.self.direction, -this.directionChangeSpeed * delta);
-        }
-        this.self.direction += dirChange;
-    };
-    PathfindState.prototype.render = function (machine, context) {
-        _super.prototype.render.call(this, machine, context);
-        if (this.path && this.self.renderDebugInfo) {
-            context.strokeStyle = 'red';
-            context.beginPath();
-            var nodes = this.path.nodes;
-            context.moveTo((nodes[0].x + .5) * tile_db_1.TILE_SIZE, (nodes[0].y + .5) * tile_db_1.TILE_SIZE);
-            for (var q = 1; q < nodes.length; q++) {
-                context.lineTo((nodes[q].x + .5) * tile_db_1.TILE_SIZE, (nodes[q].y + .5) * tile_db_1.TILE_SIZE);
-            }
-            context.stroke();
-            for (var q = 0; q < nodes.length; q++) {
-                context.fillStyle = q == this.currentIdx ? 'white' : 'red';
-                context.fillRect((nodes[q].x + .5) * tile_db_1.TILE_SIZE - 2, (nodes[q].y + .5) * tile_db_1.TILE_SIZE - 2, 4, 4);
-            }
-            context.strokeStyle = 'blue';
-            context.beginPath();
-            context.ellipse(this.self.x, this.self.y, this.turnRadius, this.turnRadius, 0, 0, 2 * Math.PI);
-            context.stroke();
         }
     };
-    return PathfindState;
-}(state_1.State));
-exports.PathfindState = PathfindState;
+    CollectResourceState.prototype.render = function (states, context) {
+        _super.prototype.render.call(this, states, context);
+        if (this.collectingResource > 0) {
+            var left = (this.resourcex + .2) * tile_db_1.TILE_SIZE;
+            var width = tile_db_1.TILE_SIZE * .6;
+            var top_1 = (this.resourcey + 1.2) * tile_db_1.TILE_SIZE;
+            var height = tile_db_1.TILE_SIZE * .1;
+            context.fillStyle = 'red';
+            context.fillRect(left, top_1, width, height);
+            context.fillStyle = 'blue';
+            context.fillRect(left, top_1, width * this.collectingResource, height);
+        }
+    };
+    return CollectResourceState;
+}(pathfind_state_1.PathfindState));
+exports.CollectResourceState = CollectResourceState;
 
 
 /***/ }),
-/* 30 */
+/* 36 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4737,64 +5231,7 @@ exports.StateMachine = StateMachine;
 
 
 /***/ }),
-/* 31 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-var State = (function () {
-    function State(self) {
-        this.self = self;
-    }
-    Object.defineProperty(State.prototype, "renderDebugInfo", {
-        get: function () {
-            return this.self.renderDebugInfo;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(State.prototype, "stateStatus", {
-        get: function () {
-            return 'ok';
-        },
-        enumerable: true,
-        configurable: true
-    });
-    State.prototype.onEnter = function (machine, previousState) {
-    };
-    State.prototype.onExit = function (machine, nextState) {
-    };
-    State.prototype.tick = function (machine, delta) {
-    };
-    State.prototype.render = function (machine, context) {
-        if (!this.renderDebugInfo)
-            return;
-        context.fillStyle = this.stateStatus == 'ok' ? 'white' :
-            this.stateStatus == 'error' ? 'red' :
-                this.stateStatus == 'alert' ? 'orange' :
-                    this.stateStatus == 'confused' ? 'yellow' :
-                        'purple';
-        var text = this.stateStatus == 'ok' ? 'OK' :
-            this.stateStatus == 'error' ? 'ERR' :
-                this.stateStatus == 'alert' ? '!' :
-                    this.stateStatus == 'confused' ? '?' :
-                        this.stateStatus;
-        context.textAlign = 'right';
-        context.textBaseline = 'bottom';
-        context.fillText(text, this.self.x - 4, this.self.y - 24);
-        context.fillStyle = 'white';
-        context.textAlign = 'left';
-        context.textBaseline = 'bottom';
-        context.fillText('- ' + this.stateName, this.self.x, this.self.y - 24);
-    };
-    return State;
-}());
-exports.State = State;
-
-
-/***/ }),
-/* 32 */
+/* 37 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4810,8 +5247,60 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-var engine_1 = __webpack_require__(0);
-var bat_1 = __webpack_require__(33);
+var pathfind_state_1 = __webpack_require__(5);
+var tile_db_1 = __webpack_require__(0);
+var WanderState = (function (_super) {
+    __extends(WanderState, _super);
+    function WanderState(self, canSeeFOW) {
+        if (canSeeFOW === void 0) { canSeeFOW = true; }
+        return _super.call(this, self, 30 * (2 + Math.random() * 1), canSeeFOW) || this;
+    }
+    Object.defineProperty(WanderState.prototype, "stateName", {
+        get: function () {
+            return 'wandering';
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(WanderState.prototype, "stateStatus", {
+        get: function () {
+            return 'confused';
+        },
+        enumerable: true,
+        configurable: true
+    });
+    WanderState.prototype.tick = function (machine, delta) {
+        if (!this.path) {
+            var targetx = Math.floor((this.self.x + (Math.random() * 3000) - 1500) / tile_db_1.TILE_SIZE);
+            var targety = Math.floor((this.self.y + (Math.random() * 3000) - 1500) / tile_db_1.TILE_SIZE);
+            this.findPath(targetx, targety);
+        }
+        _super.prototype.tick.call(this, machine, delta);
+    };
+    return WanderState;
+}(pathfind_state_1.PathfindState));
+exports.WanderState = WanderState;
+
+
+/***/ }),
+/* 38 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+var engine_1 = __webpack_require__(1);
+var bat_1 = __webpack_require__(39);
 var BatController = (function (_super) {
     __extends(BatController, _super);
     function BatController() {
@@ -4874,7 +5363,7 @@ exports.BatController = BatController;
 
 
 /***/ }),
-/* 33 */
+/* 39 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4890,10 +5379,10 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-var engine_1 = __webpack_require__(0);
+var engine_1 = __webpack_require__(1);
 var alive_db_1 = __webpack_require__(3);
 var math_1 = __webpack_require__(7);
-var merge = __webpack_require__(4);
+var merge = __webpack_require__(8);
 var Bat = (function (_super) {
     __extends(Bat, _super);
     function Bat(controller, opts) {
@@ -5001,7 +5490,7 @@ exports.Bat = Bat;
 
 
 /***/ }),
-/* 34 */
+/* 40 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5017,8 +5506,8 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-var engine_1 = __webpack_require__(0);
-var tile_db_1 = __webpack_require__(1);
+var engine_1 = __webpack_require__(1);
+var tile_db_1 = __webpack_require__(0);
 var GridRenderer = (function (_super) {
     __extends(GridRenderer, _super);
     function GridRenderer(world) {
@@ -5053,19 +5542,19 @@ exports.GridRenderer = GridRenderer;
 
 
 /***/ }),
-/* 35 */
+/* 41 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var rts_game_1 = __webpack_require__(13);
+var rts_game_1 = __webpack_require__(21);
 var game = new rts_game_1.RtsGame();
 game.start();
 
 
 /***/ }),
-/* 36 */
+/* 42 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5081,8 +5570,8 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-var engine_1 = __webpack_require__(0);
-var tile_db_1 = __webpack_require__(1);
+var engine_1 = __webpack_require__(1);
+var tile_db_1 = __webpack_require__(0);
 var alive_db_1 = __webpack_require__(3);
 var MOVE_SPEED = 4 * 30;
 var SIZE = 32;
@@ -5195,7 +5684,7 @@ exports.Player = Player;
 
 
 /***/ }),
-/* 37 */
+/* 43 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5216,13 +5705,13 @@ exports.AlivePreloadStrategy = AlivePreloadStrategy;
 
 
 /***/ }),
-/* 38 */
+/* 44 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var tile_db_1 = __webpack_require__(1);
+var tile_db_1 = __webpack_require__(0);
 var TilePreloadStrategy = (function () {
     function TilePreloadStrategy() {
     }
@@ -5237,7 +5726,7 @@ exports.TilePreloadStrategy = TilePreloadStrategy;
 
 
 /***/ }),
-/* 39 */
+/* 45 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5253,13 +5742,13 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-var engine_1 = __webpack_require__(0);
-var world_1 = __webpack_require__(41);
-var grid_renderer_1 = __webpack_require__(34);
-var player_1 = __webpack_require__(36);
-var bat_controller_1 = __webpack_require__(32);
-var enemy_controller_1 = __webpack_require__(24);
-var debug_controls_1 = __webpack_require__(23);
+var engine_1 = __webpack_require__(1);
+var world_1 = __webpack_require__(47);
+var grid_renderer_1 = __webpack_require__(40);
+var player_1 = __webpack_require__(42);
+var bat_controller_1 = __webpack_require__(38);
+var enemy_controller_1 = __webpack_require__(32);
+var debug_controls_1 = __webpack_require__(31);
 var FlockingScene = (function (_super) {
     __extends(FlockingScene, _super);
     function FlockingScene() {
@@ -5288,7 +5777,7 @@ var FlockingScene = (function (_super) {
         var batController = new bat_controller_1.BatController();
         this.addObject(batController);
         batController.addBats(1000);
-        var enemyController = new enemy_controller_1.EnemyController(this._world);
+        var enemyController = new enemy_controller_1.EnemyController(this._world, player);
         this.addObject(enemyController);
         var debugControls = new debug_controls_1.DebugControls();
         this.addObject(debugControls);
@@ -5303,13 +5792,13 @@ exports.FlockingScene = FlockingScene;
 
 
 /***/ }),
-/* 40 */
+/* 46 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var nnn = __webpack_require__(42);
+var nnn = __webpack_require__(48);
 var Noise = nnn.Noise;
 var cache = new Map();
 function generateNoise(seed, chunkx, chunky) {
@@ -5329,7 +5818,7 @@ exports.generateNoise = generateNoise;
 
 
 /***/ }),
-/* 41 */
+/* 47 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5345,9 +5834,9 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-var engine_1 = __webpack_require__(0);
-var tile_db_1 = __webpack_require__(1);
-var noise_1 = __webpack_require__(40);
+var engine_1 = __webpack_require__(1);
+var tile_db_1 = __webpack_require__(0);
+var noise_1 = __webpack_require__(46);
 var TIME_SCALE = 1 / (60 * 5);
 var World = (function (_super) {
     __extends(World, _super);
@@ -5418,7 +5907,7 @@ exports.World = World;
 
 
 /***/ }),
-/* 42 */
+/* 48 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /*
@@ -5751,7 +6240,7 @@ exports.World = World;
 
 
 /***/ }),
-/* 43 */
+/* 49 */
 /***/ (function(module, exports) {
 
 var g;
@@ -5778,7 +6267,7 @@ module.exports = g;
 
 
 /***/ }),
-/* 44 */
+/* 50 */
 /***/ (function(module, exports) {
 
 module.exports = function(module) {
@@ -5803,187 +6292,6 @@ module.exports = function(module) {
 	}
 	return module;
 };
-
-
-/***/ }),
-/* 45 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-Object.defineProperty(exports, "__esModule", { value: true });
-var pathfind_state_1 = __webpack_require__(29);
-var explore_state_1 = __webpack_require__(28);
-var tile_db_1 = __webpack_require__(1);
-var ReturnToBaseState = (function (_super) {
-    __extends(ReturnToBaseState, _super);
-    function ReturnToBaseState(self) {
-        return _super.call(this, self, 30 * (2 + Math.random() * 1), false, true) || this;
-    }
-    Object.defineProperty(ReturnToBaseState.prototype, "stateName", {
-        get: function () {
-            return 'returning';
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(ReturnToBaseState.prototype, "stateStatus", {
-        get: function () {
-            return 'ok';
-        },
-        enumerable: true,
-        configurable: true
-    });
-    ReturnToBaseState.prototype.onCompletedPath = function () {
-        if (this.self.controller.baseCoords[0] + 1 - Math.floor(this.self.x / tile_db_1.TILE_SIZE) <= 1 && this.self.controller.baseCoords[1] + 1 - Math.floor(this.self.y / tile_db_1.TILE_SIZE) <= 1) {
-            this.self.controller.treasureCollected++;
-            this.self.states.currentState = new explore_state_1.ExploreState(this.self);
-        }
-    };
-    ReturnToBaseState.prototype.tick = function (states, delta) {
-        if (!this.path) {
-            this.findPath(this.self.controller.baseCoords[0] + 1, this.self.controller.baseCoords[1] + 1, true);
-        }
-        _super.prototype.tick.call(this, states, delta);
-    };
-    return ReturnToBaseState;
-}(pathfind_state_1.PathfindState));
-exports.ReturnToBaseState = ReturnToBaseState;
-
-
-/***/ }),
-/* 46 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-Object.defineProperty(exports, "__esModule", { value: true });
-var pathfind_state_1 = __webpack_require__(29);
-var tile_db_1 = __webpack_require__(1);
-var WanderState = (function (_super) {
-    __extends(WanderState, _super);
-    function WanderState(self, canSeeFOW) {
-        if (canSeeFOW === void 0) { canSeeFOW = true; }
-        return _super.call(this, self, 30 * (2 + Math.random() * 1), canSeeFOW) || this;
-    }
-    Object.defineProperty(WanderState.prototype, "stateName", {
-        get: function () {
-            return 'wandering';
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(WanderState.prototype, "stateStatus", {
-        get: function () {
-            return 'confused';
-        },
-        enumerable: true,
-        configurable: true
-    });
-    WanderState.prototype.tick = function (machine, delta) {
-        if (!this.path) {
-            var targetx = Math.floor((this.self.x + (Math.random() * 3000) - 1500) / tile_db_1.TILE_SIZE);
-            var targety = Math.floor((this.self.y + (Math.random() * 3000) - 1500) / tile_db_1.TILE_SIZE);
-            this.findPath(targetx, targety);
-        }
-        _super.prototype.tick.call(this, machine, delta);
-    };
-    return WanderState;
-}(pathfind_state_1.PathfindState));
-exports.WanderState = WanderState;
-
-
-/***/ }),
-/* 47 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-Object.defineProperty(exports, "__esModule", { value: true });
-var pathfind_state_1 = __webpack_require__(29);
-var return_to_base_state_1 = __webpack_require__(45);
-var tile_db_1 = __webpack_require__(1);
-var CollectResourceState = (function (_super) {
-    __extends(CollectResourceState, _super);
-    function CollectResourceState(self, resourcex, resourcey) {
-        var _this = _super.call(this, self, 30 * (2 + Math.random() * 1), false, true) || this;
-        _this.resourcex = resourcex;
-        _this.resourcey = resourcey;
-        _this.collectingResource = 0;
-        _this.findPath(resourcex, resourcey);
-        _this.self.controller.setTileAt(resourcex, resourcey, tile_db_1.tiles['claimed-treasure']);
-        return _this;
-    }
-    Object.defineProperty(CollectResourceState.prototype, "stateName", {
-        get: function () {
-            return 'foraging';
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(CollectResourceState.prototype, "stateStatus", {
-        get: function () {
-            return 'ok';
-        },
-        enumerable: true,
-        configurable: true
-    });
-    CollectResourceState.prototype.tick = function (states, delta) {
-        _super.prototype.tick.call(this, states, delta);
-        if (!this.path) {
-            this.collectingResource += delta;
-            if (this.collectingResource > 1) {
-                this.self.controller.setTileAt(this.resourcex, this.resourcey, tile_db_1.tiles['depleted-treasure']);
-                this.self.states.currentState = new return_to_base_state_1.ReturnToBaseState(this.self);
-            }
-        }
-    };
-    CollectResourceState.prototype.render = function (states, context) {
-        _super.prototype.render.call(this, states, context);
-        if (this.collectingResource > 0) {
-            var left = (this.resourcex + .2) * tile_db_1.TILE_SIZE;
-            var width = tile_db_1.TILE_SIZE * .6;
-            var top_1 = (this.resourcey + 1.2) * tile_db_1.TILE_SIZE;
-            var height = tile_db_1.TILE_SIZE * .1;
-            context.fillStyle = 'red';
-            context.fillRect(left, top_1, width, height);
-            context.fillStyle = 'blue';
-            context.fillRect(left, top_1, width * this.collectingResource, height);
-        }
-    };
-    return CollectResourceState;
-}(pathfind_state_1.PathfindState));
-exports.CollectResourceState = CollectResourceState;
 
 
 /***/ })

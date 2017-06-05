@@ -17,7 +17,7 @@ export class Path {
         return fromNode.neighbors.map(n => <[Node, number]>[n, Path.actualDistance(fromNode, n)]);
     }
 
-    static readonly MAX_CHECK = 1000;
+    static readonly MAX_CHECK = 250;
 
     static pathfind(fromNode: Node, toNode: Node, findNeighbors: ((fromNode: Node) => [Node, number][]) | null = null, allowPartial = false): Path | null {
         if (!findNeighbors) findNeighbors = Path.defaultFindNeighbors;

@@ -1,5 +1,6 @@
 ﻿import { State, StateStatusT } from './state';
 import { PathfindState } from './pathfind-state';
+import { NeutralState } from './neutral-state';
 import { StateMachine } from './state-machine';
 import { ReturnToBaseState } from './return-to-base-state';
 import { Enemy } from '../enemy';
@@ -15,17 +16,17 @@ export class CollectResourceState extends PathfindState {
     get stateName() {
         return 'foraging';
     }
-    get stateStatus(): StateStatusT {
-        return 'ok';
-    }
 
-    tick(states: StateMachine, delta: number) {
-        super.tick(states, delta);
+    tick(machine: StateMachine, delta: number) {
+        super.tick(machine, delta);
         if (!this.path) {
             this.collectingResource += delta;
             if (this.collectingResource > 1) {
                 this.self.controller.setTileAt(this.resourcex, this.resourcey, tiles['depleted-treasure']);
-                this.self.states.currentState = new ReturnToBaseState(this.self);
+                this.self.hasResource = true;
+                let newState = new ReturnToBaseState(this.self);
+                if (machine.currentState instanceof NeutralState) machine.currentState.substate = newState;
+                else machine.currentState = newState;
             }
         }
     }

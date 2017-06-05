@@ -1,5 +1,6 @@
 ﻿import { State, StateStatusT } from './state';
 import { PathfindState } from './pathfind-state';
+import { NeutralState } from './neutral-state';
 import { StateMachine } from './state-machine';
 import { ExploreState } from './explore-state';
 import { Enemy } from '../enemy';
@@ -13,14 +14,17 @@ export class ReturnToBaseState extends PathfindState {
     get stateName() {
         return 'returning';
     }
-    get stateStatus(): StateStatusT {
-        return 'ok';
-    }
 
     onCompletedPath() {
         if (this.self.controller.baseCoords[0] + 1 - Math.floor(this.self.x / TILE_SIZE) <= 1 && this.self.controller.baseCoords[1] + 1 - Math.floor(this.self.y / TILE_SIZE) <= 1) {
-            this.self.controller.treasureCollected++;
-            this.self.states.currentState = new ExploreState(this.self);
+            if (this.self.hasResource) {
+                this.self.controller.treasureCollected++;
+                this.self.hasResource = false;
+            }
+            let newState = new ExploreState(this.self);
+            let machine = this.self.states;
+            if (machine.currentState instanceof NeutralState) machine.currentState.substate = newState;
+            else machine.currentState = newState;
         }
     }
 

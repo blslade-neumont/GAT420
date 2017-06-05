@@ -5,7 +5,9 @@ import { tiles, TILE_SIZE, WorldTile } from '../dbs/tile-db';
 import { Node, keyFromCoords } from './node';
 import { Path } from './path';
 import { pointDistance2 } from '../utils/math';
+import { Player } from '../player';
 
+import { NeutralState } from './states/neutral-state';
 import { WanderState } from './states/wander-state';
 import { ExploreState } from './states/explore-state';
 import { CollectResourceState } from './states/collect-resource-state';
@@ -16,7 +18,7 @@ const FOW_BUCKET_SIZE = 8;
 type EnemyRenderMode = 'none' | 'single' | 'all';
 
 export class EnemyController extends GameObject {
-    constructor(private world: World) {
+    constructor(private world: World, readonly player: Player) {
         super('EnemyController');
         this.init();
     }
@@ -39,7 +41,7 @@ export class EnemyController extends GameObject {
 
     addToScene(scene: GameScene) {
         super.addToScene(scene);
-        this.addEnemies(10);
+        this.addEnemies(1);
     }
 
     get debugControls(): any[] {
@@ -84,9 +86,10 @@ export class EnemyController extends GameObject {
     renderMode = 'all';
     renderFogOfWar = true;
     keyStates = {
-        'Digit1': WanderState,
-        'Digit2': ExploreState,
-        'Digit3': ReturnToBaseState,
+        'Digit1': NeutralState,
+        'Digit2': WanderState,
+        'Digit3': ExploreState,
+        'Digit4': ReturnToBaseState
     }
     handleEvent(evt: GameEvent) {
         if (evt.type == 'keyPressed') {
@@ -121,7 +124,7 @@ export class EnemyController extends GameObject {
         }
         if (this.renderMode == 'single' && this._enemies.length) this._enemies[0].renderDebugInfo = true;
     }
-    
+
     private _fowBuckets = new Map<string, boolean[][]>();
     isInFOW(x: number, y: number) {
         let [bucketx, buckety] = [Math.floor(x / FOW_BUCKET_SIZE), Math.floor(y / FOW_BUCKET_SIZE)];
