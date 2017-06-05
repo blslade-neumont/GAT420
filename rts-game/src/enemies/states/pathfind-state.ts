@@ -8,7 +8,7 @@ import { TILE_SIZE } from '../../dbs/tile-db';
 import { pointDistance2 } from '../../utils/math';
 
 export abstract class PathfindState extends State {
-    constructor(self: Enemy) {
+    constructor(self: Enemy, private canSeeFOW = false) {
         super(self);
     }
 
@@ -25,15 +25,20 @@ export abstract class PathfindState extends State {
     turnRadius = 24;
     directionChangeSpeed = 180;
     directionTolerance = 15;
+
+    onCompletedPath() { }
     
     tick(machine: StateMachine, delta: number) {
-        if (this.path && this.currentIdx >= this.path.nodes.length) this.path = null;
         if (!this.path) return;
 
         let nodes = this.path.nodes;
         let targeting: Node | null = null;
         while (true) {
-            if (this.currentIdx >= nodes.length) return;
+            if (this.currentIdx >= nodes.length) {
+                this.onCompletedPath();
+                this.path = null;
+                return;
+            }
             targeting = nodes[this.currentIdx];
             let dist2 = pointDistance2(this.self.x, this.self.y, (targeting.x + .5) * TILE_SIZE, (targeting.y + .5) * TILE_SIZE);
             if (dist2 > this.turnRadius * this.turnRadius) break;

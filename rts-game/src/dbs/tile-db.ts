@@ -10,11 +10,12 @@ export interface WorldTile {
 
 export let tiles: { [name: string]: WorldTile } = {
     'enemy-base': {
-        sprite: {
-            src: 'images/enemy-base.png',
-            tileset: { width: TILE_SIZE, height: TILE_SIZE, tilex: 0, tiley: 0 }
-        },
+        sprite: { src: 'images/enemy-base.png' },
         isSolid: true
+    },
+    'treasure': {
+        sprite: { src: 'images/treasure.png' },
+        isSolid: false
     }
 };
 

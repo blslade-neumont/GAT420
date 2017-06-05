@@ -5,8 +5,8 @@ import { Enemy } from '../enemy';
 import { TILE_SIZE } from '../../dbs/tile-db';
 
 export class WanderState extends PathfindState {
-    constructor(self: Enemy) {
-        super(self);
+    constructor(self: Enemy, canSeeFOW = true) {
+        super(self, canSeeFOW);
     }
 
     get stateName() {

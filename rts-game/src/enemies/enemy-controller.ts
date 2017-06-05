@@ -6,6 +6,11 @@ import { Node, keyFromCoords } from './node';
 import { Path } from './path';
 import { pointDistance2 } from '../utils/math';
 
+import { WanderState } from './states/wander-state';
+import { ExploreState } from './states/explore-state';
+import { CollectResourceState } from './states/collect-resource-state';
+import { ReturnToBaseState } from './states/return-to-base-state';
+
 const FOW_BUCKET_SIZE = 8;
 
 type EnemyRenderMode = 'none' | 'single' | 'all';
@@ -40,7 +45,8 @@ export class EnemyController extends GameObject {
     get debugControls(): any[] {
         return [
             { key: 'E', name: 'enemy render mode', state: this.renderMode },
-            { key: 'G', name: 'fog of war', state: this.renderFogOfWar }
+            { key: 'G', name: 'fog of war', state: this.renderFogOfWar },
+            { key: 'Ctrl+Number', name: 'force enemy state' }
         ];
     }
 
@@ -53,6 +59,8 @@ export class EnemyController extends GameObject {
     get enemies() {
         return this._enemies;
     }
+
+    treasureCollected = 0;
 
     addEnemies(count: number) {
         for (let q = 0; q < count; q++)
@@ -71,6 +79,11 @@ export class EnemyController extends GameObject {
 
     renderMode = 'all';
     renderFogOfWar = true;
+    keyStates = {
+        'Digit1': WanderState,
+        'Digit2': ExploreState,
+        'Digit3': ReturnToBaseState,
+    }
     handleEvent(evt: GameEvent) {
         if (evt.type == 'keyPressed') {
             if (evt.code == 'KeyE') {
@@ -81,6 +94,14 @@ export class EnemyController extends GameObject {
             }
             else if (evt.code == 'KeyG') {
                 this.renderFogOfWar = !this.renderFogOfWar;
+            }
+            else if (evt.ctrlPressed && this.keyStates[evt.code]) {
+                let state = this.keyStates[evt.code];
+                for (let enemy of this.enemies) {
+                    if (!(enemy instanceof state)) {
+                        enemy.states.currentState = new state(enemy);
+                    }
+                }
             }
         }
     }
@@ -172,5 +193,10 @@ export class EnemyController extends GameObject {
                 }
             }
         }
+
+        context.fillStyle = 'white';
+        context.textAlign = 'left';
+        context.textBaseline = 'middle';
+        context.fillText(`${this.treasureCollected} collected`, (this.baseCoords[0] + 1) * TILE_SIZE + 8, (this.baseCoords[1] + .5) * TILE_SIZE);
     }
 }

@@ -46,8 +46,9 @@ export class World extends GameObject {
             let column: WorldTile[] = [];
             for (let w = 0; w < 64; w++) {
                 let num = noise[q][w];
-                let name = num < .2 ? `rock${this.decorateNum(q, w, 7)}` :
-                                      `water${this.decorateNum(w, q, 4)}`;
+                let name =       num >= .2 ? `water${this.decorateNum(w, q, 4)}` :
+                      Math.random() < .005 ? 'treasure' :
+                                             `rock${this.decorateNum(q, w, 7)}`;
                 column.push(tiles[name]);
             }
             chunk.push(column);

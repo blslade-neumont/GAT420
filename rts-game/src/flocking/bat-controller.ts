@@ -10,7 +10,7 @@ export class BatController extends GameObject {
     
     get debugControls(): any[] {
         return [
-            { key: 'f', name: 'flocking render mode', state: this.renderMode }
+            { key: 'F', name: 'flocking render mode', state: this.renderMode }
         ];
     }
 

@@ -9,5 +9,6 @@
         "AStarPathfinding": true,
         "**/dist": true,
         "**/node_modules": true
-    }
+    },
+    "editor.renderWhitespace": "all"
 }

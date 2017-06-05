@@ -20,6 +20,9 @@ export class Enemy extends GameObject {
     renderDebugInfo = false;
 
     private _states: StateMachine;
+    get states() {
+        return this._states;
+    }
 
     private _fowClearTime = Math.random() * FOW_CLEAR_RESET_TIME;
     fowClearDistance = 4;
