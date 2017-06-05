@@ -10,8 +10,16 @@ import { pointDistance2 } from '../../utils/math';
 export abstract class PathfindState extends State {
     constructor(self: Enemy, private canSeeFOW = false) {
         super(self);
+        if (!canSeeFOW) this.findNeighborsFn = this.findNeighborsFOW.bind(this);
     }
 
+    private findNeighborsFOW(node: Node): [Node, number][] {
+        return node.neighbors
+            .filter(n => !this.self.controller.isInFOW(n.x, n.y))
+            .map(n => <[Node, number]>[n, Path.actualDistance(node, n)]);
+    }
+
+    findNeighborsFn: ((fromNode: Node) => [Node, number][]) | null = null;
     private _path: Path;
     get path() {
         return this._path;
@@ -20,6 +28,12 @@ export abstract class PathfindState extends State {
         this._path = val;
         this.currentIdx = 0;
     }
+    findPath(tox: number, toy: number) {
+        let path = this.self.controller.getPath(Math.floor(this.self.x / TILE_SIZE), Math.floor(this.self.y / TILE_SIZE), tox, toy, this.findNeighborsFn);
+        if (!path) return false;
+        this.path = path;
+        return true;
+    }
 
     private currentIdx = 0;
     turnRadius = 24;
@@ -27,7 +41,7 @@ export abstract class PathfindState extends State {
     directionTolerance = 15;
 
     onCompletedPath() { }
-    
+
     tick(machine: StateMachine, delta: number) {
         if (!this.path) return;
 

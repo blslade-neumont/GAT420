@@ -155,11 +155,11 @@ export class EnemyController extends GameObject {
         }
         else return this.nodeMap.get(key);
     }
-    getPath(xfrom: number, yfrom: number, xto: number, yto: number): Path | null {
+    getPath(xfrom: number, yfrom: number, xto: number, yto: number, findNeighborsFn: ((fromNode: Node) => [Node, number][]) | null = null): Path | null {
         let from = this.getNode(xfrom, yfrom);
         let to = this.getNode(xto, yto);
         if (!from || !to) return null;
-        return Path.pathfind(from, to);
+        return Path.pathfind(from, to, findNeighborsFn);
     }
 
     render(context: CanvasRenderingContext2D) {

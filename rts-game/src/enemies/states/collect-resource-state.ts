@@ -8,7 +8,7 @@ import { TILE_SIZE } from '../../dbs/tile-db';
 export class CollectResourceState extends PathfindState {
     constructor(self: Enemy, private resourcex: number, private resourcey: number) {
         super(self);
-        this.path = this.self.controller.getPath(Math.floor(this.self.x / TILE_SIZE), Math.floor(this.self.y / TILE_SIZE), resourcex, resourcey);
+        this.findPath(resourcex, resourcey);
     }
 
     get stateName() {

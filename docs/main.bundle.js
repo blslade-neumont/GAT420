@@ -4187,12 +4187,13 @@ var EnemyController = (function (_super) {
         else
             return this.nodeMap.get(key);
     };
-    EnemyController.prototype.getPath = function (xfrom, yfrom, xto, yto) {
+    EnemyController.prototype.getPath = function (xfrom, yfrom, xto, yto, findNeighborsFn) {
+        if (findNeighborsFn === void 0) { findNeighborsFn = null; }
         var from = this.getNode(xfrom, yfrom);
         var to = this.getNode(xto, yto);
         if (!from || !to)
             return null;
-        return path_1.Path.pathfind(from, to);
+        return path_1.Path.pathfind(from, to, findNeighborsFn);
     };
     EnemyController.prototype.render = function (context) {
         if (!this.renderFogOfWar)
@@ -4374,7 +4375,13 @@ var Path = (function () {
         var ydiff = fromNode.y - toNode.y;
         return Math.sqrt(xdiff * xdiff + ydiff * ydiff);
     };
-    Path.pathfind = function (fromNode, toNode) {
+    Path.defaultFindNeighbors = function (fromNode) {
+        return fromNode.neighbors.map(function (n) { return [n, Path.actualDistance(fromNode, n)]; });
+    };
+    Path.pathfind = function (fromNode, toNode, findNeighbors) {
+        if (findNeighbors === void 0) { findNeighbors = null; }
+        if (!findNeighbors)
+            findNeighbors = Path.defaultFindNeighbors;
         var checkedNodes = new Set();
         var toCheck = new Set();
         toCheck.add(fromNode);
@@ -4401,11 +4408,11 @@ var Path = (function () {
                 return { value: new Path(Path.reconstructPath(cameFrom, current), gScores.get(current)) };
             toCheck.delete(current);
             checkedNodes.add(current);
-            for (var _i = 0, _a = current.neighbors; _i < _a.length; _i++) {
-                var conn = _a[_i];
+            for (var _i = 0, _a = findNeighbors(current); _i < _a.length; _i++) {
+                var _b = _a[_i], conn = _b[0], cost = _b[1];
                 if (checkedNodes.has(conn))
                     continue;
-                tentativeGScore = gScores.get(current) + Path.actualDistance(current, conn);
+                tentativeGScore = gScores.get(current) + cost;
                 if (!toCheck.has(conn))
                     toCheck.add(conn);
                 else if (gScores.has(conn) && tentativeGScore >= gScores.get(conn))
@@ -4480,7 +4487,7 @@ var ExploreState = (function (_super) {
         if (!this.path) {
             var targetx = Math.floor((this.self.x + (Math.random() * 3000) - 1500) / tile_db_1.TILE_SIZE);
             var targety = Math.floor((this.self.y + (Math.random() * 3000) - 1500) / tile_db_1.TILE_SIZE);
-            this.path = this.self.controller.getPath(Math.floor(this.self.x / tile_db_1.TILE_SIZE), Math.floor(this.self.y / tile_db_1.TILE_SIZE), targetx, targety);
+            this.findPath(targetx, targety);
         }
         _super.prototype.tick.call(this, machine, delta);
     };
@@ -4508,6 +4515,7 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 var engine_1 = __webpack_require__(0);
 var state_1 = __webpack_require__(31);
+var path_1 = __webpack_require__(27);
 var tile_db_1 = __webpack_require__(1);
 var math_1 = __webpack_require__(7);
 var PathfindState = (function (_super) {
@@ -4516,12 +4524,21 @@ var PathfindState = (function (_super) {
         if (canSeeFOW === void 0) { canSeeFOW = false; }
         var _this = _super.call(this, self) || this;
         _this.canSeeFOW = canSeeFOW;
+        _this.findNeighborsFn = null;
         _this.currentIdx = 0;
         _this.turnRadius = 24;
         _this.directionChangeSpeed = 180;
         _this.directionTolerance = 15;
+        if (!canSeeFOW)
+            _this.findNeighborsFn = _this.findNeighborsFOW.bind(_this);
         return _this;
     }
+    PathfindState.prototype.findNeighborsFOW = function (node) {
+        var _this = this;
+        return node.neighbors
+            .filter(function (n) { return !_this.self.controller.isInFOW(n.x, n.y); })
+            .map(function (n) { return [n, path_1.Path.actualDistance(node, n)]; });
+    };
     Object.defineProperty(PathfindState.prototype, "path", {
         get: function () {
             return this._path;
@@ -4533,6 +4550,13 @@ var PathfindState = (function (_super) {
         enumerable: true,
         configurable: true
     });
+    PathfindState.prototype.findPath = function (tox, toy) {
+        var path = this.self.controller.getPath(Math.floor(this.self.x / tile_db_1.TILE_SIZE), Math.floor(this.self.y / tile_db_1.TILE_SIZE), tox, toy, this.findNeighborsFn);
+        if (!path)
+            return false;
+        this.path = path;
+        return true;
+    };
     PathfindState.prototype.onCompletedPath = function () { };
     PathfindState.prototype.tick = function (machine, delta) {
         if (!this.path)
@@ -5730,12 +5754,11 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 var pathfind_state_1 = __webpack_require__(29);
 var explore_state_1 = __webpack_require__(28);
-var tile_db_1 = __webpack_require__(1);
 var ReturnToBaseState = (function (_super) {
     __extends(ReturnToBaseState, _super);
     function ReturnToBaseState(self) {
         var _this = _super.call(this, self) || this;
-        _this.path = _this.self.controller.getPath(Math.floor(_this.self.x / tile_db_1.TILE_SIZE), Math.floor(_this.self.y / tile_db_1.TILE_SIZE), _this.self.controller.baseCoords[0] + 1, _this.self.controller.baseCoords[1] + 1);
+        _this.findPath(_this.self.controller.baseCoords[0] + 1, _this.self.controller.baseCoords[1] + 1);
         return _this;
     }
     Object.defineProperty(ReturnToBaseState.prototype, "stateName", {
@@ -5812,7 +5835,7 @@ var WanderState = (function (_super) {
         if (!this.path) {
             var targetx = Math.floor((this.self.x + (Math.random() * 3000) - 1500) / tile_db_1.TILE_SIZE);
             var targety = Math.floor((this.self.y + (Math.random() * 3000) - 1500) / tile_db_1.TILE_SIZE);
-            this.path = this.self.controller.getPath(Math.floor(this.self.x / tile_db_1.TILE_SIZE), Math.floor(this.self.y / tile_db_1.TILE_SIZE), targetx, targety);
+            this.findPath(targetx, targety);
         }
         _super.prototype.tick.call(this, machine, delta);
     };

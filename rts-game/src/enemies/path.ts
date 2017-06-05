@@ -13,7 +13,13 @@ export class Path {
         return Math.sqrt(xdiff * xdiff + ydiff * ydiff);
     }
 
-    static pathfind(fromNode: Node, toNode: Node): Path | null {
+    static defaultFindNeighbors(fromNode: Node): [Node, number][] {
+        return fromNode.neighbors.map(n => <[Node, number]>[n, Path.actualDistance(fromNode, n)]);
+    }
+
+    static pathfind(fromNode: Node, toNode: Node, findNeighbors: ((fromNode: Node) => [Node, number][]) | null = null): Path | null {
+        if (!findNeighbors) findNeighbors = Path.defaultFindNeighbors;
+        
         var checkedNodes = new Set<Node>();
         var toCheck = new Set<Node>();
         toCheck.add(fromNode);
@@ -43,11 +49,11 @@ export class Path {
 
             toCheck.delete(current);
             checkedNodes.add(current);
-            for (let conn of current.neighbors)
+            for (let [conn, cost] of findNeighbors(current))
             {
                 if (checkedNodes.has(conn)) continue;
 
-                var tentativeGScore = gScores.get(current) + Path.actualDistance(current, conn);
+                var tentativeGScore = gScores.get(current) + cost;
                 if (!toCheck.has(conn)) toCheck.add(conn);
                 else if (gScores.has(conn) && tentativeGScore >= gScores.get(conn)) continue;
 
