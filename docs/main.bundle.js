@@ -4497,9 +4497,15 @@ var ExploreState = (function (_super) {
     });
     ExploreState.prototype.tick = function (machine, delta) {
         if (!this.path) {
-            var targetx = Math.floor((this.self.x + (Math.random() * 3000) - 1500) / tile_db_1.TILE_SIZE);
-            var targety = Math.floor((this.self.y + (Math.random() * 3000) - 1500) / tile_db_1.TILE_SIZE);
-            this.findPath(targetx, targety, true);
+            for (var q = 10; q < 100; q++) {
+                var size = tile_db_1.TILE_SIZE * Math.sqrt(q);
+                var targetx = Math.floor((this.self.x - size + (size * 2 * Math.random())) / tile_db_1.TILE_SIZE);
+                var targety = Math.floor((this.self.y - size + (size * 2 * Math.random())) / tile_db_1.TILE_SIZE);
+                if (this.self.controller.isInFOW(targetx, targety)) {
+                    this.findPath(targetx, targety, true);
+                    return;
+                }
+            }
         }
         _super.prototype.tick.call(this, machine, delta);
     };
@@ -4566,8 +4572,6 @@ var PathfindState = (function (_super) {
     PathfindState.prototype.findPath = function (tox, toy, allowPartial) {
         if (allowPartial === void 0) { allowPartial = false; }
         var path = this.self.controller.getPath(Math.floor(this.self.x / tile_db_1.TILE_SIZE), Math.floor(this.self.y / tile_db_1.TILE_SIZE), tox, toy, this.findNeighborsFn, allowPartial);
-        if (allowPartial && !path)
-            console.log("Could not find path!");
         if (!path)
             return false;
         this.path = path;

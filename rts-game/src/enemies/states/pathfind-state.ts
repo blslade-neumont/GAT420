@@ -30,7 +30,6 @@ export abstract class PathfindState extends State {
     }
     findPath(tox: number, toy: number, allowPartial = false) {
         let path = this.self.controller.getPath(Math.floor(this.self.x / TILE_SIZE), Math.floor(this.self.y / TILE_SIZE), tox, toy, this.findNeighborsFn, allowPartial);
-        if (allowPartial && !path) console.log(`Could not find path!`);
         if (!path) return false;
         this.path = path;
         return true;
