@@ -121,6 +121,9 @@ export class EnemyController extends GameObject {
         let [offsetx, offsety] = [fmod(x, FOW_BUCKET_SIZE), fmod(y, FOW_BUCKET_SIZE)];
         return bucket[offsetx][offsety];
     }
+    isSolid(x: number, y: number) {
+        return this.world.getTileAt(x, y).isSolid;
+    }
     setFOW(x: number, y: number, val: boolean) {
         let [bucketx, buckety] = [Math.floor(x / FOW_BUCKET_SIZE), Math.floor(y / FOW_BUCKET_SIZE)];
         let key = `${bucketx}_${buckety}`;

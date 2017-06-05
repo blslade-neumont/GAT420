@@ -4151,6 +4151,9 @@ var EnemyController = (function (_super) {
         var _b = [engine_1.fmod(x, FOW_BUCKET_SIZE), engine_1.fmod(y, FOW_BUCKET_SIZE)], offsetx = _b[0], offsety = _b[1];
         return bucket[offsetx][offsety];
     };
+    EnemyController.prototype.isSolid = function (x, y) {
+        return this.world.getTileAt(x, y).isSolid;
+    };
     EnemyController.prototype.setFOW = function (x, y, val) {
         var _a = [Math.floor(x / FOW_BUCKET_SIZE), Math.floor(y / FOW_BUCKET_SIZE)], bucketx = _a[0], buckety = _a[1];
         var key = bucketx + "_" + buckety;
@@ -4501,7 +4504,10 @@ var ExploreState = (function (_super) {
                 var size = tile_db_1.TILE_SIZE * Math.sqrt(q);
                 var targetx = Math.floor((this.self.x - size + (size * 2 * Math.random())) / tile_db_1.TILE_SIZE);
                 var targety = Math.floor((this.self.y - size + (size * 2 * Math.random())) / tile_db_1.TILE_SIZE);
-                if (this.self.controller.isInFOW(targetx, targety)) {
+                if (!this.self.controller.isInFOW(targetx, targety) && !this.self.controller.isSolid(targetx, targety) && (this.self.controller.isInFOW(targetx + 1, targety) ||
+                    this.self.controller.isInFOW(targetx - 1, targety) ||
+                    this.self.controller.isInFOW(targetx, targety + 1) ||
+                    this.self.controller.isInFOW(targetx, targety - 1))) {
                     this.findPath(targetx, targety, true);
                     return;
                 }
