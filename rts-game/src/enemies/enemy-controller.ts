@@ -1,7 +1,7 @@
 import { GameObject, GameScene, GameEvent, fmod } from '../engine';
 import { Enemy } from './enemy';
 import { World } from '../world';
-import { tiles, TILE_SIZE } from '../dbs/tile-db';
+import { tiles, TILE_SIZE, WorldTile } from '../dbs/tile-db';
 import { Node, keyFromCoords } from './node';
 import { Path } from './path';
 import { pointDistance2 } from '../utils/math';
@@ -121,8 +121,11 @@ export class EnemyController extends GameObject {
         let [offsetx, offsety] = [fmod(x, FOW_BUCKET_SIZE), fmod(y, FOW_BUCKET_SIZE)];
         return bucket[offsetx][offsety];
     }
-    isSolid(x: number, y: number) {
-        return this.world.getTileAt(x, y).isSolid;
+    getTileAt(x: number, y: number) {
+        return this.world.getTileAt(x, y);
+    }
+    setTileAt(x: number, y: number, tile: WorldTile) {
+        return this.world.setTileAt(x, y, tile);
     }
     setFOW(x: number, y: number, val: boolean) {
         let [bucketx, buckety] = [Math.floor(x / FOW_BUCKET_SIZE), Math.floor(y / FOW_BUCKET_SIZE)];

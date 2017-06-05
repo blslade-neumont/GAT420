@@ -16,6 +16,10 @@ export let tiles: { [name: string]: WorldTile } = {
     'treasure': {
         sprite: { src: 'images/treasure.png' },
         isSolid: false
+    },
+    'claimed-treasure': {
+        sprite: { src: 'images/treasure.png' },
+        isSolid: false
     }
 };
 

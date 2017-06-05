@@ -3,12 +3,13 @@ import { PathfindState } from './pathfind-state';
 import { StateMachine } from './state-machine';
 import { ReturnToBaseState } from './return-to-base-state';
 import { Enemy } from '../enemy';
-import { TILE_SIZE } from '../../dbs/tile-db';
+import { tiles, TILE_SIZE } from '../../dbs/tile-db';
 
 export class CollectResourceState extends PathfindState {
     constructor(self: Enemy, private resourcex: number, private resourcey: number) {
         super(self, 30 * (2 + Math.random() * 1));
         this.findPath(resourcex, resourcey);
+        this.self.controller.setTileAt(resourcex, resourcey, tiles['claimed-treasure']);
     }
 
     get stateName() {
@@ -20,9 +21,12 @@ export class CollectResourceState extends PathfindState {
 
     tick(states: StateMachine, delta: number) {
         super.tick(states, delta);
-        this.collectingResource += delta;
-        if (this.collectingResource > 1) {
-            this.self.states.currentState = new ReturnToBaseState(this.self);
+        if (!this.path) {
+            this.collectingResource += delta;
+            if (this.collectingResource > 1) {
+                this.self.controller.setTileAt(this.resourcex, this.resourcey, tiles['rock']);
+                this.self.states.currentState = new ReturnToBaseState(this.self);
+            }
         }
     }
 

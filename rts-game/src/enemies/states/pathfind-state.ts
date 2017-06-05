@@ -36,7 +36,7 @@ export abstract class PathfindState extends State {
     }
 
     private currentIdx = 0;
-    turnRadius = 24;
+    turnRadius = 30;
     directionChangeSpeed = 180;
     directionTolerance = 15;
 

@@ -97,6 +97,10 @@ exports.tiles = {
     'treasure': {
         sprite: { src: 'images/treasure.png' },
         isSolid: false
+    },
+    'claimed-treasure': {
+        sprite: { src: 'images/treasure.png' },
+        isSolid: false
     }
 };
 function addDecorationTiles(name, count, def) {
@@ -4151,8 +4155,11 @@ var EnemyController = (function (_super) {
         var _b = [engine_1.fmod(x, FOW_BUCKET_SIZE), engine_1.fmod(y, FOW_BUCKET_SIZE)], offsetx = _b[0], offsety = _b[1];
         return bucket[offsetx][offsety];
     };
-    EnemyController.prototype.isSolid = function (x, y) {
-        return this.world.getTileAt(x, y).isSolid;
+    EnemyController.prototype.getTileAt = function (x, y) {
+        return this.world.getTileAt(x, y);
+    };
+    EnemyController.prototype.setTileAt = function (x, y, tile) {
+        return this.world.setTileAt(x, y, tile);
     };
     EnemyController.prototype.setFOW = function (x, y, val) {
         var _a = [Math.floor(x / FOW_BUCKET_SIZE), Math.floor(y / FOW_BUCKET_SIZE)], bucketx = _a[0], buckety = _a[1];
@@ -4478,6 +4485,7 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 var pathfind_state_1 = __webpack_require__(29);
+var collect_resource_state_1 = __webpack_require__(47);
 var tile_db_1 = __webpack_require__(1);
 var ExploreState = (function (_super) {
     __extends(ExploreState, _super);
@@ -4499,19 +4507,30 @@ var ExploreState = (function (_super) {
         configurable: true
     });
     ExploreState.prototype.tick = function (machine, delta) {
-        if (!this.path) {
-            for (var q = 10; q < 100; q++) {
-                var size = tile_db_1.TILE_SIZE * Math.sqrt(q);
-                var targetx = Math.floor((this.self.x - size + (size * 2 * Math.random())) / tile_db_1.TILE_SIZE);
-                var targety = Math.floor((this.self.y - size + (size * 2 * Math.random())) / tile_db_1.TILE_SIZE);
-                if (!this.self.controller.isInFOW(targetx, targety) && !this.self.controller.isSolid(targetx, targety) && (this.self.controller.isInFOW(targetx + 1, targety) ||
-                    this.self.controller.isInFOW(targetx - 1, targety) ||
-                    this.self.controller.isInFOW(targetx, targety + 1) ||
-                    this.self.controller.isInFOW(targetx, targety - 1))) {
-                    this.findPath(targetx, targety, true);
+        var controller = this.self.controller;
+        var found = false;
+        for (var q = 10; q < 100; q++) {
+            var size = tile_db_1.TILE_SIZE * Math.sqrt(q);
+            var targetx = Math.floor((this.self.x - size + (size * 2 * Math.random())) / tile_db_1.TILE_SIZE);
+            var targety = Math.floor((this.self.y - size + (size * 2 * Math.random())) / tile_db_1.TILE_SIZE);
+            var tile = controller.getTileAt(targetx, targety);
+            if (!controller.isInFOW(targetx, targety)) {
+                if (tile == tile_db_1.tiles['treasure']) {
+                    machine.currentState = new collect_resource_state_1.CollectResourceState(this.self, targetx, targety);
                     return;
                 }
+                else if (!this.path && !tile.isSolid && (controller.isInFOW(targetx + 1, targety) ||
+                    controller.isInFOW(targetx - 1, targety) ||
+                    controller.isInFOW(targetx, targety + 1) ||
+                    controller.isInFOW(targetx, targety - 1))) {
+                    found = this.findPath(targetx, targety);
+                }
             }
+        }
+        if (!this.path && !found) {
+            var targetx = Math.floor((this.self.x + (Math.random() * 3000) - 1500) / tile_db_1.TILE_SIZE);
+            var targety = Math.floor((this.self.y + (Math.random() * 3000) - 1500) / tile_db_1.TILE_SIZE);
+            this.findPath(targetx, targety);
         }
         _super.prototype.tick.call(this, machine, delta);
     };
@@ -4551,7 +4570,7 @@ var PathfindState = (function (_super) {
         _this.canSeeFOW = canSeeFOW;
         _this.findNeighborsFn = null;
         _this.currentIdx = 0;
-        _this.turnRadius = 24;
+        _this.turnRadius = 30;
         _this.directionChangeSpeed = 180;
         _this.directionTolerance = 15;
         if (!canSeeFOW)
@@ -5872,6 +5891,79 @@ var WanderState = (function (_super) {
     return WanderState;
 }(pathfind_state_1.PathfindState));
 exports.WanderState = WanderState;
+
+
+/***/ }),
+/* 47 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+var pathfind_state_1 = __webpack_require__(29);
+var return_to_base_state_1 = __webpack_require__(45);
+var tile_db_1 = __webpack_require__(1);
+var CollectResourceState = (function (_super) {
+    __extends(CollectResourceState, _super);
+    function CollectResourceState(self, resourcex, resourcey) {
+        var _this = _super.call(this, self, 30 * (2 + Math.random() * 1)) || this;
+        _this.resourcex = resourcex;
+        _this.resourcey = resourcey;
+        _this.collectingResource = 0;
+        _this.findPath(resourcex, resourcey);
+        _this.self.controller.setTileAt(resourcex, resourcey, tile_db_1.tiles['claimed-treasure']);
+        return _this;
+    }
+    Object.defineProperty(CollectResourceState.prototype, "stateName", {
+        get: function () {
+            return 'foraging';
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(CollectResourceState.prototype, "stateStatus", {
+        get: function () {
+            return 'ok';
+        },
+        enumerable: true,
+        configurable: true
+    });
+    CollectResourceState.prototype.tick = function (states, delta) {
+        _super.prototype.tick.call(this, states, delta);
+        if (!this.path) {
+            this.collectingResource += delta;
+            if (this.collectingResource > 1) {
+                this.self.controller.setTileAt(this.resourcex, this.resourcey, tile_db_1.tiles['rock']);
+                this.self.states.currentState = new return_to_base_state_1.ReturnToBaseState(this.self);
+            }
+        }
+    };
+    CollectResourceState.prototype.render = function (states, context) {
+        _super.prototype.render.call(this, states, context);
+        if (this.collectingResource > 0) {
+            var left = (this.resourcex + .2) * tile_db_1.TILE_SIZE;
+            var width = tile_db_1.TILE_SIZE * .6;
+            var top_1 = (this.resourcey + 1.2) * tile_db_1.TILE_SIZE;
+            var height = tile_db_1.TILE_SIZE * .1;
+            context.fillStyle = 'red';
+            context.fillRect(left, top_1, width, height);
+            context.fillStyle = 'blue';
+            context.fillRect(left, top_1, width * this.collectingResource, height);
+        }
+    };
+    return CollectResourceState;
+}(pathfind_state_1.PathfindState));
+exports.CollectResourceState = CollectResourceState;
 
 
 /***/ })
