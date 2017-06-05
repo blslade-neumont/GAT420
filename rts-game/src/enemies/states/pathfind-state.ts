@@ -8,7 +8,7 @@ import { TILE_SIZE } from '../../dbs/tile-db';
 import { pointDistance2 } from '../../utils/math';
 
 export abstract class PathfindState extends State {
-    constructor(self: Enemy, private targetSpeed: number, private canSeeFOW = false) {
+    constructor(self: Enemy, private targetSpeed: number, private canSeeFOW = false, private arrive = false) {
         super(self);
         if (!canSeeFOW) this.findNeighborsFn = this.findNeighborsFOW.bind(this);
     }
@@ -43,12 +43,16 @@ export abstract class PathfindState extends State {
     onCompletedPath() { }
 
     tick(machine: StateMachine, delta: number) {
-        if (!this.path) {
-            this.self.speed += -this.self.speed * Math.pow(1 - delta, 2);
+        if (!this.path || (this.arrive && this.currentIdx == this.path.nodes.length - 1)) {
+            this.self.speed += -this.self.speed * (1 - Math.pow(1 - delta, 2));
+            if (this.path) {
+                this.onCompletedPath();
+                this.path = null;
+            }
             return;
         }
         else {
-            this.self.speed += (this.targetSpeed - this.self.speed) * Math.pow(1 - delta, 2);
+            this.self.speed += (this.targetSpeed - this.self.speed) * (1 - Math.pow(1 - delta, 2));
         }
 
         let nodes = this.path.nodes;
@@ -61,7 +65,7 @@ export abstract class PathfindState extends State {
             }
             targeting = nodes[this.currentIdx];
             let dist2 = pointDistance2(this.self.x, this.self.y, (targeting.x + .5) * TILE_SIZE, (targeting.y + .5) * TILE_SIZE);
-            if (dist2 > this.turnRadius * this.turnRadius) break;
+            if (dist2 > this.turnRadius * this.turnRadius || (this.arrive && this.currentIdx == nodes.length - 1 && dist2 > 4)) break;
             this.currentIdx++;
         }
 

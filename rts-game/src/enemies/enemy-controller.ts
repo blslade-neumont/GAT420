@@ -46,6 +46,8 @@ export class EnemyController extends GameObject {
         return [
             { key: 'E', name: 'enemy render mode', state: this.renderMode },
             { key: 'G', name: 'fog of war', state: this.renderFogOfWar },
+            { key: 'P', name: 'enemies can see player', state: this.canSeePlayer },
+            { key: 'R', name: 'enemies are afraid of player', state: this.afraidOfPlayer },
             { key: 'Ctrl+Number', name: 'force enemy state' }
         ];
     }
@@ -61,6 +63,8 @@ export class EnemyController extends GameObject {
     }
 
     treasureCollected = 0;
+    canSeePlayer = false;
+    afraidOfPlayer = true;
 
     addEnemies(count: number) {
         for (let q = 0; q < count; q++)
@@ -94,6 +98,12 @@ export class EnemyController extends GameObject {
             }
             else if (evt.code == 'KeyG') {
                 this.renderFogOfWar = !this.renderFogOfWar;
+            }
+            else if (evt.code == 'KeyP') {
+                this.canSeePlayer = !this.canSeePlayer;
+            }
+            else if (evt.code == 'KeyR') {
+                this.afraidOfPlayer = !this.afraidOfPlayer;
             }
             else if (evt.ctrlPressed && this.keyStates[evt.code]) {
                 let state = this.keyStates[evt.code];

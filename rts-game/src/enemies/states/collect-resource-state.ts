@@ -7,7 +7,7 @@ import { tiles, TILE_SIZE } from '../../dbs/tile-db';
 
 export class CollectResourceState extends PathfindState {
     constructor(self: Enemy, private resourcex: number, private resourcey: number) {
-        super(self, 30 * (2 + Math.random() * 1));
+        super(self, 30 * (2 + Math.random() * 1), false, true);
         this.findPath(resourcex, resourcey);
         this.self.controller.setTileAt(resourcex, resourcey, tiles['claimed-treasure']);
     }

@@ -7,7 +7,7 @@ import { TILE_SIZE } from '../../dbs/tile-db';
 
 export class ReturnToBaseState extends PathfindState {
     constructor(self: Enemy) {
-        super(self, 30 * (2 + Math.random() * 1));
+        super(self, 30 * (2 + Math.random() * 1), false, true);
     }
 
     get stateName() {

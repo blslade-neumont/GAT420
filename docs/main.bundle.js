@@ -4049,6 +4049,8 @@ var EnemyController = (function (_super) {
         _this._baseCoords = [0, 0];
         _this._enemies = [];
         _this.treasureCollected = 0;
+        _this.canSeePlayer = false;
+        _this.afraidOfPlayer = true;
         _this.renderMode = 'all';
         _this.renderFogOfWar = true;
         _this.keyStates = {
@@ -4086,6 +4088,8 @@ var EnemyController = (function (_super) {
             return [
                 { key: 'E', name: 'enemy render mode', state: this.renderMode },
                 { key: 'G', name: 'fog of war', state: this.renderFogOfWar },
+                { key: 'P', name: 'enemies can see player', state: this.canSeePlayer },
+                { key: 'R', name: 'enemies are afraid of player', state: this.afraidOfPlayer },
                 { key: 'Ctrl+Number', name: 'force enemy state' }
             ];
         },
@@ -4130,6 +4134,12 @@ var EnemyController = (function (_super) {
             }
             else if (evt.code == 'KeyG') {
                 this.renderFogOfWar = !this.renderFogOfWar;
+            }
+            else if (evt.code == 'KeyP') {
+                this.canSeePlayer = !this.canSeePlayer;
+            }
+            else if (evt.code == 'KeyR') {
+                this.afraidOfPlayer = !this.afraidOfPlayer;
             }
             else if (evt.ctrlPressed && this.keyStates[evt.code]) {
                 var state = this.keyStates[evt.code];
@@ -4567,11 +4577,13 @@ var tile_db_1 = __webpack_require__(1);
 var math_1 = __webpack_require__(7);
 var PathfindState = (function (_super) {
     __extends(PathfindState, _super);
-    function PathfindState(self, targetSpeed, canSeeFOW) {
+    function PathfindState(self, targetSpeed, canSeeFOW, arrive) {
         if (canSeeFOW === void 0) { canSeeFOW = false; }
+        if (arrive === void 0) { arrive = false; }
         var _this = _super.call(this, self) || this;
         _this.targetSpeed = targetSpeed;
         _this.canSeeFOW = canSeeFOW;
+        _this.arrive = arrive;
         _this.findNeighborsFn = null;
         _this.currentIdx = 0;
         _this.turnRadius = 30;
@@ -4608,12 +4620,16 @@ var PathfindState = (function (_super) {
     };
     PathfindState.prototype.onCompletedPath = function () { };
     PathfindState.prototype.tick = function (machine, delta) {
-        if (!this.path) {
-            this.self.speed += -this.self.speed * Math.pow(1 - delta, 2);
+        if (!this.path || (this.arrive && this.currentIdx == this.path.nodes.length - 1)) {
+            this.self.speed += -this.self.speed * (1 - Math.pow(1 - delta, 2));
+            if (this.path) {
+                this.onCompletedPath();
+                this.path = null;
+            }
             return;
         }
         else {
-            this.self.speed += (this.targetSpeed - this.self.speed) * Math.pow(1 - delta, 2);
+            this.self.speed += (this.targetSpeed - this.self.speed) * (1 - Math.pow(1 - delta, 2));
         }
         var nodes = this.path.nodes;
         var targeting = null;
@@ -4625,7 +4641,7 @@ var PathfindState = (function (_super) {
             }
             targeting = nodes[this.currentIdx];
             var dist2 = math_1.pointDistance2(this.self.x, this.self.y, (targeting.x + .5) * tile_db_1.TILE_SIZE, (targeting.y + .5) * tile_db_1.TILE_SIZE);
-            if (dist2 > this.turnRadius * this.turnRadius)
+            if (dist2 > this.turnRadius * this.turnRadius || (this.arrive && this.currentIdx == nodes.length - 1 && dist2 > 4))
                 break;
             this.currentIdx++;
         }
@@ -5812,7 +5828,7 @@ var tile_db_1 = __webpack_require__(1);
 var ReturnToBaseState = (function (_super) {
     __extends(ReturnToBaseState, _super);
     function ReturnToBaseState(self) {
-        return _super.call(this, self, 30 * (2 + Math.random() * 1)) || this;
+        return _super.call(this, self, 30 * (2 + Math.random() * 1), false, true) || this;
     }
     Object.defineProperty(ReturnToBaseState.prototype, "stateName", {
         get: function () {
@@ -5920,7 +5936,7 @@ var tile_db_1 = __webpack_require__(1);
 var CollectResourceState = (function (_super) {
     __extends(CollectResourceState, _super);
     function CollectResourceState(self, resourcex, resourcey) {
-        var _this = _super.call(this, self, 30 * (2 + Math.random() * 1)) || this;
+        var _this = _super.call(this, self, 30 * (2 + Math.random() * 1), false, true) || this;
         _this.resourcex = resourcex;
         _this.resourcey = resourcey;
         _this.collectingResource = 0;
