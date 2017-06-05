@@ -101,6 +101,10 @@ exports.tiles = {
     'claimed-treasure': {
         sprite: { src: 'images/treasure.png' },
         isSolid: false
+    },
+    'depleted-treasure': {
+        sprite: { src: 'images/depleted-treasure.png' },
+        isSolid: false
     }
 };
 function addDecorationTiles(name, count, def) {
@@ -5943,7 +5947,7 @@ var CollectResourceState = (function (_super) {
         if (!this.path) {
             this.collectingResource += delta;
             if (this.collectingResource > 1) {
-                this.self.controller.setTileAt(this.resourcex, this.resourcey, tile_db_1.tiles['rock']);
+                this.self.controller.setTileAt(this.resourcex, this.resourcey, tile_db_1.tiles['depleted-treasure']);
                 this.self.states.currentState = new return_to_base_state_1.ReturnToBaseState(this.self);
             }
         }

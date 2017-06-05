@@ -24,7 +24,7 @@ export class CollectResourceState extends PathfindState {
         if (!this.path) {
             this.collectingResource += delta;
             if (this.collectingResource > 1) {
-                this.self.controller.setTileAt(this.resourcex, this.resourcey, tiles['rock']);
+                this.self.controller.setTileAt(this.resourcex, this.resourcey, tiles['depleted-treasure']);
                 this.self.states.currentState = new ReturnToBaseState(this.self);
             }
         }
