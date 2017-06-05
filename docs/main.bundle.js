@@ -4177,23 +4177,24 @@ var EnemyController = (function (_super) {
             }
         }
     };
-    EnemyController.prototype.getNode = function (x, y) {
+    EnemyController.prototype.getNode = function (x, y, includeSolid) {
+        if (includeSolid === void 0) { includeSolid = true; }
         var key = node_1.keyFromCoords(x, y);
         if (!this.nodeMap.has(key)) {
-            var newNode = this.world.getTileAt(x, y).isSolid ? null : new node_1.Node(this, x, y);
+            var newNode = new node_1.Node(this, x, y);
             this.nodeMap.set(key, newNode);
-            return newNode;
         }
-        else
-            return this.nodeMap.get(key);
+        var isSolid = includeSolid ? false : this.world.getTileAt(x, y).isSolid;
+        return isSolid ? null : this.nodeMap.get(key);
     };
-    EnemyController.prototype.getPath = function (xfrom, yfrom, xto, yto, findNeighborsFn) {
+    EnemyController.prototype.getPath = function (xfrom, yfrom, xto, yto, findNeighborsFn, allowPartial) {
         if (findNeighborsFn === void 0) { findNeighborsFn = null; }
+        if (allowPartial === void 0) { allowPartial = false; }
         var from = this.getNode(xfrom, yfrom);
         var to = this.getNode(xto, yto);
         if (!from || !to)
             return null;
-        return path_1.Path.pathfind(from, to, findNeighborsFn);
+        return path_1.Path.pathfind(from, to, findNeighborsFn, allowPartial);
     };
     EnemyController.prototype.render = function (context) {
         if (!this.renderFogOfWar)
@@ -4323,14 +4324,14 @@ var Node = (function () {
             if (!this._neighbors) {
                 var temp_1 = Node.neighborOffsets.map(function (_a) {
                     var offx = _a[0], offy = _a[1];
-                    return _this.controller.getNode(_this.x + offx, _this.y + offy);
+                    return _this.controller.getNode(_this.x + offx, _this.y + offy, false);
                 });
                 this._neighbors = temp_1.concat(Node.dependentNeighborOffsets.map(function (dep) {
                     for (var q = 0; q < dep[0].length; q++)
                         if (!temp_1[dep[0][q]])
                             return null;
                     var _a = dep[1], offx = _a[0], offy = _a[1];
-                    return _this.controller.getNode(_this.x + offx, _this.y + offy);
+                    return _this.controller.getNode(_this.x + offx, _this.y + offy, false);
                 })).filter(Boolean);
             }
             return this._neighbors;
@@ -4378,8 +4379,9 @@ var Path = (function () {
     Path.defaultFindNeighbors = function (fromNode) {
         return fromNode.neighbors.map(function (n) { return [n, Path.actualDistance(fromNode, n)]; });
     };
-    Path.pathfind = function (fromNode, toNode, findNeighbors) {
+    Path.pathfind = function (fromNode, toNode, findNeighbors, allowPartial) {
         if (findNeighbors === void 0) { findNeighbors = null; }
+        if (allowPartial === void 0) { allowPartial = false; }
         if (!findNeighbors)
             findNeighbors = Path.defaultFindNeighbors;
         var checkedNodes = new Set();
@@ -4423,10 +4425,23 @@ var Path = (function () {
             }
         };
         var tentativeGScore;
-        while (toCheck.size != 0) {
+        while (toCheck.size != 0 && toCheck.size < Path.MAX_CHECK) {
             var state_1 = _loop_1();
             if (typeof state_1 === "object")
                 return state_1.value;
+        }
+        if (allowPartial) {
+            var bestDistance_1 = Infinity;
+            var bestNode_1 = null;
+            checkedNodes.forEach(function (node) {
+                var dist = Path.heuristicDistance(node, toNode);
+                if (dist < bestDistance_1) {
+                    bestDistance_1 = dist;
+                    bestNode_1 = node;
+                }
+            });
+            if (bestNode_1 && bestNode_1 !== fromNode)
+                return new Path(Path.reconstructPath(cameFrom, bestNode_1), gScores.get(bestNode_1));
         }
         return null;
     };
@@ -4438,6 +4453,7 @@ var Path = (function () {
     };
     return Path;
 }());
+Path.MAX_CHECK = 1000;
 exports.Path = Path;
 
 
@@ -4463,7 +4479,7 @@ var tile_db_1 = __webpack_require__(1);
 var ExploreState = (function (_super) {
     __extends(ExploreState, _super);
     function ExploreState(self) {
-        return _super.call(this, self) || this;
+        return _super.call(this, self, 30 * (2 + Math.random() * 1)) || this;
     }
     Object.defineProperty(ExploreState.prototype, "stateName", {
         get: function () {
@@ -4479,15 +4495,11 @@ var ExploreState = (function (_super) {
         enumerable: true,
         configurable: true
     });
-    ExploreState.prototype.onEnter = function (machine, prevState) {
-        _super.prototype.onEnter.call(this, machine, prevState);
-        this.self.speed = 30 * (2 + Math.random() * 1);
-    };
     ExploreState.prototype.tick = function (machine, delta) {
         if (!this.path) {
             var targetx = Math.floor((this.self.x + (Math.random() * 3000) - 1500) / tile_db_1.TILE_SIZE);
             var targety = Math.floor((this.self.y + (Math.random() * 3000) - 1500) / tile_db_1.TILE_SIZE);
-            this.findPath(targetx, targety);
+            this.findPath(targetx, targety, true);
         }
         _super.prototype.tick.call(this, machine, delta);
     };
@@ -4520,9 +4532,10 @@ var tile_db_1 = __webpack_require__(1);
 var math_1 = __webpack_require__(7);
 var PathfindState = (function (_super) {
     __extends(PathfindState, _super);
-    function PathfindState(self, canSeeFOW) {
+    function PathfindState(self, targetSpeed, canSeeFOW) {
         if (canSeeFOW === void 0) { canSeeFOW = false; }
         var _this = _super.call(this, self) || this;
+        _this.targetSpeed = targetSpeed;
         _this.canSeeFOW = canSeeFOW;
         _this.findNeighborsFn = null;
         _this.currentIdx = 0;
@@ -4550,8 +4563,11 @@ var PathfindState = (function (_super) {
         enumerable: true,
         configurable: true
     });
-    PathfindState.prototype.findPath = function (tox, toy) {
-        var path = this.self.controller.getPath(Math.floor(this.self.x / tile_db_1.TILE_SIZE), Math.floor(this.self.y / tile_db_1.TILE_SIZE), tox, toy, this.findNeighborsFn);
+    PathfindState.prototype.findPath = function (tox, toy, allowPartial) {
+        if (allowPartial === void 0) { allowPartial = false; }
+        var path = this.self.controller.getPath(Math.floor(this.self.x / tile_db_1.TILE_SIZE), Math.floor(this.self.y / tile_db_1.TILE_SIZE), tox, toy, this.findNeighborsFn, allowPartial);
+        if (allowPartial && !path)
+            console.log("Could not find path!");
         if (!path)
             return false;
         this.path = path;
@@ -4559,8 +4575,13 @@ var PathfindState = (function (_super) {
     };
     PathfindState.prototype.onCompletedPath = function () { };
     PathfindState.prototype.tick = function (machine, delta) {
-        if (!this.path)
+        if (!this.path) {
+            this.self.speed += -this.self.speed * Math.pow(1 - delta, 2);
             return;
+        }
+        else {
+            this.self.speed += (this.targetSpeed - this.self.speed) * Math.pow(1 - delta, 2);
+        }
         var nodes = this.path.nodes;
         var targeting = null;
         while (true) {
@@ -5754,12 +5775,11 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 var pathfind_state_1 = __webpack_require__(29);
 var explore_state_1 = __webpack_require__(28);
+var tile_db_1 = __webpack_require__(1);
 var ReturnToBaseState = (function (_super) {
     __extends(ReturnToBaseState, _super);
     function ReturnToBaseState(self) {
-        var _this = _super.call(this, self) || this;
-        _this.findPath(_this.self.controller.baseCoords[0] + 1, _this.self.controller.baseCoords[1] + 1);
-        return _this;
+        return _super.call(this, self, 30 * (2 + Math.random() * 1)) || this;
     }
     Object.defineProperty(ReturnToBaseState.prototype, "stateName", {
         get: function () {
@@ -5776,12 +5796,16 @@ var ReturnToBaseState = (function (_super) {
         configurable: true
     });
     ReturnToBaseState.prototype.onCompletedPath = function () {
-        this.self.controller.treasureCollected++;
-        this.self.states.currentState = new explore_state_1.ExploreState(this.self);
+        if (this.self.controller.baseCoords[0] + 1 - Math.floor(this.self.x / tile_db_1.TILE_SIZE) <= 1 && this.self.controller.baseCoords[1] + 1 - Math.floor(this.self.y / tile_db_1.TILE_SIZE) <= 1) {
+            this.self.controller.treasureCollected++;
+            this.self.states.currentState = new explore_state_1.ExploreState(this.self);
+        }
     };
-    ReturnToBaseState.prototype.onEnter = function (machine, prevState) {
-        _super.prototype.onEnter.call(this, machine, prevState);
-        this.self.speed = 30 * (2 + Math.random() * 1);
+    ReturnToBaseState.prototype.tick = function (states, delta) {
+        if (!this.path) {
+            this.findPath(this.self.controller.baseCoords[0] + 1, this.self.controller.baseCoords[1] + 1, true);
+        }
+        _super.prototype.tick.call(this, states, delta);
     };
     return ReturnToBaseState;
 }(pathfind_state_1.PathfindState));
@@ -5811,7 +5835,7 @@ var WanderState = (function (_super) {
     __extends(WanderState, _super);
     function WanderState(self, canSeeFOW) {
         if (canSeeFOW === void 0) { canSeeFOW = true; }
-        return _super.call(this, self, canSeeFOW) || this;
+        return _super.call(this, self, 30 * (2 + Math.random() * 1), canSeeFOW) || this;
     }
     Object.defineProperty(WanderState.prototype, "stateName", {
         get: function () {
@@ -5827,10 +5851,6 @@ var WanderState = (function (_super) {
         enumerable: true,
         configurable: true
     });
-    WanderState.prototype.onEnter = function (machine, prevState) {
-        _super.prototype.onEnter.call(this, machine, prevState);
-        this.self.speed = 30 * (2 + Math.random() * 1);
-    };
     WanderState.prototype.tick = function (machine, delta) {
         if (!this.path) {
             var targetx = Math.floor((this.self.x + (Math.random() * 3000) - 1500) / tile_db_1.TILE_SIZE);

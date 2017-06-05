@@ -8,7 +8,7 @@ import { TILE_SIZE } from '../../dbs/tile-db';
 import { pointDistance2 } from '../../utils/math';
 
 export abstract class PathfindState extends State {
-    constructor(self: Enemy, private canSeeFOW = false) {
+    constructor(self: Enemy, private targetSpeed: number, private canSeeFOW = false) {
         super(self);
         if (!canSeeFOW) this.findNeighborsFn = this.findNeighborsFOW.bind(this);
     }
@@ -28,8 +28,9 @@ export abstract class PathfindState extends State {
         this._path = val;
         this.currentIdx = 0;
     }
-    findPath(tox: number, toy: number) {
-        let path = this.self.controller.getPath(Math.floor(this.self.x / TILE_SIZE), Math.floor(this.self.y / TILE_SIZE), tox, toy, this.findNeighborsFn);
+    findPath(tox: number, toy: number, allowPartial = false) {
+        let path = this.self.controller.getPath(Math.floor(this.self.x / TILE_SIZE), Math.floor(this.self.y / TILE_SIZE), tox, toy, this.findNeighborsFn, allowPartial);
+        if (allowPartial && !path) console.log(`Could not find path!`);
         if (!path) return false;
         this.path = path;
         return true;
@@ -43,7 +44,13 @@ export abstract class PathfindState extends State {
     onCompletedPath() { }
 
     tick(machine: StateMachine, delta: number) {
-        if (!this.path) return;
+        if (!this.path) {
+            this.self.speed += -this.self.speed * Math.pow(1 - delta, 2);
+            return;
+        }
+        else {
+            this.self.speed += (this.targetSpeed - this.self.speed) * Math.pow(1 - delta, 2);
+        }
 
         let nodes = this.path.nodes;
         let targeting: Node | null = null;

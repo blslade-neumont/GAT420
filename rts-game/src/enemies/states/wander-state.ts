@@ -6,7 +6,7 @@ import { TILE_SIZE } from '../../dbs/tile-db';
 
 export class WanderState extends PathfindState {
     constructor(self: Enemy, canSeeFOW = true) {
-        super(self, canSeeFOW);
+        super(self, 30 * (2 + Math.random() * 1), canSeeFOW);
     }
 
     get stateName() {
@@ -14,11 +14,6 @@ export class WanderState extends PathfindState {
     }
     get stateStatus(): StateStatusT {
         return 'confused';
-    }
-
-    onEnter(machine: StateMachine, prevState: State | null) {
-        super.onEnter(machine, prevState);
-        this.self.speed = 30 * (2 + Math.random() * 1);
     }
 
     tick(machine: StateMachine, delta: number) {

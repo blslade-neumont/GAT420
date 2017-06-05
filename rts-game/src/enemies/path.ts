@@ -17,7 +17,9 @@ export class Path {
         return fromNode.neighbors.map(n => <[Node, number]>[n, Path.actualDistance(fromNode, n)]);
     }
 
-    static pathfind(fromNode: Node, toNode: Node, findNeighbors: ((fromNode: Node) => [Node, number][]) | null = null): Path | null {
+    static readonly MAX_CHECK = 1000;
+
+    static pathfind(fromNode: Node, toNode: Node, findNeighbors: ((fromNode: Node) => [Node, number][]) | null = null, allowPartial = false): Path | null {
         if (!findNeighbors) findNeighbors = Path.defaultFindNeighbors;
         
         var checkedNodes = new Set<Node>();
@@ -32,7 +34,7 @@ export class Path {
         var fScores = new Map<Node, number>();
         fScores.set(fromNode, Path.heuristicDistance(fromNode, toNode));
 
-        while (toCheck.size != 0) {
+        while (toCheck.size != 0 && toCheck.size < Path.MAX_CHECK) {
             let currentFScore = Infinity;
             let current: Node | null = null;
             toCheck.forEach(node => {
@@ -61,6 +63,19 @@ export class Path {
                 gScores.set(conn, tentativeGScore);
                 fScores.set(conn, tentativeGScore + Path.heuristicDistance(conn, toNode));
             }
+        }
+
+        if (allowPartial) {
+            let bestDistance = Infinity;
+            let bestNode: Node | null = null;
+            checkedNodes.forEach(node => {
+                let dist = Path.heuristicDistance(node, toNode);
+                if (dist < bestDistance) {
+                    bestDistance = dist;
+                    bestNode = node;
+                }
+            });
+            if (bestNode && bestNode !== fromNode) return new Path(Path.reconstructPath(cameFrom, bestNode), gScores.get(bestNode));
         }
 
         return null;

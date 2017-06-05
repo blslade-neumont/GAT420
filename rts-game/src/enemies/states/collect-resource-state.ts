@@ -7,7 +7,7 @@ import { TILE_SIZE } from '../../dbs/tile-db';
 
 export class CollectResourceState extends PathfindState {
     constructor(self: Enemy, private resourcex: number, private resourcey: number) {
-        super(self);
+        super(self, 30 * (2 + Math.random() * 1));
         this.findPath(resourcex, resourcey);
     }
 
@@ -20,7 +20,6 @@ export class CollectResourceState extends PathfindState {
 
     tick(states: StateMachine, delta: number) {
         super.tick(states, delta);
-        if (!this.path) this.self.speed *= Math.pow(1 - delta, 2);
         this.collectingResource += delta;
         if (this.collectingResource > 1) {
             this.self.states.currentState = new ReturnToBaseState(this.self);
@@ -28,11 +27,6 @@ export class CollectResourceState extends PathfindState {
     }
 
     collectingResource: number = 0;
-
-    onEnter(machine: StateMachine, prevState: State | null) {
-        super.onEnter(machine, prevState);
-        this.self.speed = 30 * (2 + Math.random() * 1);
-    }
 
     render(states: StateMachine, context: CanvasRenderingContext2D) {
         super.render(states, context);

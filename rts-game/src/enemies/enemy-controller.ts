@@ -145,21 +145,24 @@ export class EnemyController extends GameObject {
         }
     }
 
-    nodeMap = new Map<string, Node | null>();
-    getNode(x: number, y: number): Node | null {
+    nodeMap = new Map<string, Node>();
+    getNode(x: number, y: number): Node;
+    getNode(x: number, y: number, includeSolid: true): Node;
+    getNode(x: number, y: number, includeSolid: false): Node | null;
+    getNode(x: number, y: number, includeSolid = true): Node | null {
         let key = keyFromCoords(x, y);
         if (!this.nodeMap.has(key)) {
-            let newNode: Node | null = this.world.getTileAt(x, y).isSolid ? null : new Node(this, x, y);
+            let newNode: Node = new Node(this, x, y);
             this.nodeMap.set(key, newNode);
-            return newNode;
         }
-        else return this.nodeMap.get(key);
+        let isSolid = includeSolid ? false : this.world.getTileAt(x, y).isSolid;
+        return isSolid ? null : this.nodeMap.get(key);
     }
-    getPath(xfrom: number, yfrom: number, xto: number, yto: number, findNeighborsFn: ((fromNode: Node) => [Node, number][]) | null = null): Path | null {
+    getPath(xfrom: number, yfrom: number, xto: number, yto: number, findNeighborsFn: ((fromNode: Node) => [Node, number][]) | null = null, allowPartial = false): Path | null {
         let from = this.getNode(xfrom, yfrom);
         let to = this.getNode(xto, yto);
         if (!from || !to) return null;
-        return Path.pathfind(from, to, findNeighborsFn);
+        return Path.pathfind(from, to, findNeighborsFn, allowPartial);
     }
 
     render(context: CanvasRenderingContext2D) {

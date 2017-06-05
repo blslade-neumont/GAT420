@@ -23,12 +23,12 @@ export class Node {
     private _neighbors: Node[] | null = null;
     get neighbors(): Node[] {
         if (!this._neighbors) {
-            let temp = Node.neighborOffsets.map(([offx, offy]) => this.controller.getNode(this.x + offx, this.y + offy));
+            let temp = Node.neighborOffsets.map(([offx, offy]) => this.controller.getNode(this.x + offx, this.y + offy, false));
             this._neighbors = [...temp, ...Node.dependentNeighborOffsets.map(dep => {
                 for (let q = 0; q < dep[0].length; q++)
                     if (!temp[dep[0][q]]) return null;
                 let [offx, offy] = dep[1];
-                return this.controller.getNode(this.x + offx, this.y + offy);
+                return this.controller.getNode(this.x + offx, this.y + offy, false);
             })].filter(Boolean);
         }
         return this._neighbors;

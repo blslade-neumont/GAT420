@@ -7,8 +7,7 @@ import { TILE_SIZE } from '../../dbs/tile-db';
 
 export class ReturnToBaseState extends PathfindState {
     constructor(self: Enemy) {
-        super(self);
-        this.findPath(this.self.controller.baseCoords[0] + 1, this.self.controller.baseCoords[1] + 1);
+        super(self, 30 * (2 + Math.random() * 1));
     }
 
     get stateName() {
@@ -19,12 +18,16 @@ export class ReturnToBaseState extends PathfindState {
     }
 
     onCompletedPath() {
-        this.self.controller.treasureCollected++;
-        this.self.states.currentState = new ExploreState(this.self);
+        if (this.self.controller.baseCoords[0] + 1 - Math.floor(this.self.x / TILE_SIZE) <= 1 && this.self.controller.baseCoords[1] + 1 - Math.floor(this.self.y / TILE_SIZE) <= 1) {
+            this.self.controller.treasureCollected++;
+            this.self.states.currentState = new ExploreState(this.self);
+        }
     }
 
-    onEnter(machine: StateMachine, prevState: State | null) {
-        super.onEnter(machine, prevState);
-        this.self.speed = 30 * (2 + Math.random() * 1);
+    tick(states: StateMachine, delta: number) {
+        if (!this.path) {
+            this.findPath(this.self.controller.baseCoords[0] + 1, this.self.controller.baseCoords[1] + 1, true);
+        }
+        super.tick(states, delta);
     }
 }
