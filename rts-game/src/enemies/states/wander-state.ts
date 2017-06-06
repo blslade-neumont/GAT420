@@ -28,7 +28,6 @@ export class WanderState extends State {
 
         this.newSteeringDir -= delta;
         if (this.newSteeringDir <= 0) {
-            // this.steeringDirection = clamp(this.steeringDirection + ((Math.random() - .5) * (delta * 15)), -1, 1);
             this.steeringDirection = clamp(this.steeringDirection + (Math.random() - .5) * 2, -1, 1);
             this.newSteeringDir = .25;
         }

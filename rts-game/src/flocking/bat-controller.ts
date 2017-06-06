@@ -10,6 +10,7 @@ export class BatController extends GameObject {
     
     get debugControls(): any[] {
         return [
+            { key: 'B', name: 'enable flocking', state: this.enableFlocking },
             { key: 'F', name: 'flocking render mode', state: this.renderMode }
         ];
     }
@@ -31,19 +32,29 @@ export class BatController extends GameObject {
             x: (-.5 + Math.random()) * 3000,
             y: (-.5 + Math.random()) * 3000
         };
-        let bird = new Bat(this, opts);
-        this._bats.push(bird);
-        this.game.scene.addObject(bird);
+        let bat = new Bat(this, opts);
+        bat.shouldTick = bat.shouldRender = this.enableFlocking
+        this._bats.push(bat);
+        this.game.scene.addObject(bat);
     }
 
     renderMode: FlockingRenderMode = 'none';
+    enableFlocking: boolean = false;
 
     handleEvent(evt: GameEvent) {
-        if (evt.type == 'keyPressed' && evt.code == 'KeyF') {
-            this.renderMode = (this.renderMode == 'none') ? 'single' :
-                            (this.renderMode == 'single') ? 'all' :
-                                                            'none';
-            this.updateRenderDebugInfo();
+        if (evt.type === 'keyPressed') {
+            if (evt.code === 'KeyF') {
+                this.renderMode = (this.renderMode == 'none') ? 'single' :
+                                (this.renderMode == 'single') ? 'all' :
+                                                                'none';
+                this.updateRenderDebugInfo();
+            }
+            else if (evt.code === 'KeyB') {
+                this.enableFlocking = !this.enableFlocking;
+                for (let bat of this.bats) {
+                    bat.shouldTick = bat.shouldRender = this.enableFlocking;
+                }
+            }
         }
     }
     private updateRenderDebugInfo() {

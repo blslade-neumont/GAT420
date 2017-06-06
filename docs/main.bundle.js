@@ -76,7 +76,7 @@ function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 Object.defineProperty(exports, "__esModule", { value: true });
-__export(__webpack_require__(27));
+__export(__webpack_require__(26));
 
 
 /***/ }),
@@ -2838,7 +2838,7 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 var pathfind_state_1 = __webpack_require__(11);
 var neutral_state_1 = __webpack_require__(2);
-var collect_resource_state_1 = __webpack_require__(36);
+var collect_resource_state_1 = __webpack_require__(35);
 var tile_db_1 = __webpack_require__(1);
 var ExploreState = (function (_super) {
     __extends(ExploreState, _super);
@@ -4029,74 +4029,6 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-var state_1 = __webpack_require__(3);
-var engine_1 = __webpack_require__(0);
-var WanderState = (function (_super) {
-    __extends(WanderState, _super);
-    function WanderState(self, targetSpeed) {
-        if (targetSpeed === void 0) { targetSpeed = 30 * (2 + Math.random() * 1); }
-        var _this = _super.call(this, self) || this;
-        _this.targetSpeed = targetSpeed;
-        _this.steeringDirection = 0;
-        _this.turnSpeed = 1;
-        _this.newSteeringDir = 0;
-        return _this;
-    }
-    Object.defineProperty(WanderState.prototype, "stateName", {
-        get: function () {
-            return 'wandering';
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(WanderState.prototype, "stateStatus", {
-        get: function () {
-            return 'confused';
-        },
-        enumerable: true,
-        configurable: true
-    });
-    WanderState.prototype.tick = function (delta) {
-        var controller = this.self.controller;
-        var states = this.self.states;
-        this.self.speed += (this.targetSpeed - this.self.speed) * (1 - Math.pow(1 - delta, 2));
-        this.newSteeringDir -= delta;
-        if (this.newSteeringDir <= 0) {
-            this.steeringDirection = engine_1.clamp(this.steeringDirection + (Math.random() - .5) * 2, -1, 1);
-            this.newSteeringDir = .25;
-        }
-        this.self.direction += this.turnSpeed * 1.2 * this.steeringDirection;
-        _super.prototype.tick.call(this, delta);
-    };
-    WanderState.prototype.renderImpl = function (context) {
-        _super.prototype.renderImpl.call(this, context);
-        context.fillStyle = 'lightgrey';
-        context.fillRect(20, -11, 2, 22);
-        context.fillStyle = 'red';
-        context.fillRect(20, -1 - (10 * this.steeringDirection), 2, 2);
-    };
-    return WanderState;
-}(state_1.State));
-exports.WanderState = WanderState;
-
-
-/***/ }),
-/* 22 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-Object.defineProperty(exports, "__esModule", { value: true });
 var engine_1 = __webpack_require__(0);
 var tile_preload_strategy_1 = __webpack_require__(44);
 var alive_preload_strategy_1 = __webpack_require__(43);
@@ -4120,7 +4052,7 @@ exports.RtsGame = RtsGame;
 
 
 /***/ }),
-/* 23 */
+/* 22 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4194,7 +4126,7 @@ exports.AudioSourceObject = AudioSourceObject;
 //# sourceMappingURL=audio-source-object.js.map
 
 /***/ }),
-/* 24 */
+/* 23 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4253,7 +4185,7 @@ exports.FollowCamera = FollowCamera;
 //# sourceMappingURL=follow-camera.js.map
 
 /***/ }),
-/* 25 */
+/* 24 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4387,7 +4319,7 @@ exports.GameScene = GameScene;
 //# sourceMappingURL=game-scene.js.map
 
 /***/ }),
-/* 26 */
+/* 25 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4557,7 +4489,7 @@ exports.Game = Game;
 //# sourceMappingURL=game.js.map
 
 /***/ }),
-/* 27 */
+/* 26 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4569,16 +4501,16 @@ Object.defineProperty(exports, "__esModule", { value: true });
 __export(__webpack_require__(13));
 __export(__webpack_require__(15));
 __export(__webpack_require__(8));
-__export(__webpack_require__(24));
-__export(__webpack_require__(26));
-__export(__webpack_require__(14));
 __export(__webpack_require__(23));
 __export(__webpack_require__(25));
-__export(__webpack_require__(31));
+__export(__webpack_require__(14));
+__export(__webpack_require__(22));
+__export(__webpack_require__(24));
+__export(__webpack_require__(30));
 //# sourceMappingURL=index.js.map
 
 /***/ }),
-/* 28 */
+/* 27 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4593,7 +4525,7 @@ exports.delay = delay;
 //# sourceMappingURL=delay.js.map
 
 /***/ }),
-/* 29 */
+/* 28 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4625,7 +4557,7 @@ exports.EventEmitter = EventEmitter;
 //# sourceMappingURL=event-emitter.js.map
 
 /***/ }),
-/* 30 */
+/* 29 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4642,7 +4574,7 @@ var MouseButton;
 //# sourceMappingURL=events.js.map
 
 /***/ }),
-/* 31 */
+/* 30 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4651,9 +4583,9 @@ function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 Object.defineProperty(exports, "__esModule", { value: true });
+__export(__webpack_require__(27));
 __export(__webpack_require__(28));
 __export(__webpack_require__(29));
-__export(__webpack_require__(30));
 __export(__webpack_require__(5));
 __export(__webpack_require__(16));
 __export(__webpack_require__(9));
@@ -4661,7 +4593,7 @@ __export(__webpack_require__(17));
 //# sourceMappingURL=index.js.map
 
 /***/ }),
-/* 32 */
+/* 31 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4711,7 +4643,7 @@ exports.DebugControls = DebugControls;
 
 
 /***/ }),
-/* 33 */
+/* 32 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4728,13 +4660,13 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 var engine_1 = __webpack_require__(0);
-var enemy_1 = __webpack_require__(34);
+var enemy_1 = __webpack_require__(33);
 var tile_db_1 = __webpack_require__(1);
-var node_1 = __webpack_require__(35);
+var node_1 = __webpack_require__(34);
 var path_1 = __webpack_require__(18);
 var math_1 = __webpack_require__(4);
 var neutral_state_1 = __webpack_require__(2);
-var wander_state_1 = __webpack_require__(21);
+var wander_state_1 = __webpack_require__(37);
 var explore_state_1 = __webpack_require__(10);
 var return_to_base_state_1 = __webpack_require__(12);
 var FOW_BUCKET_SIZE = 8;
@@ -4959,7 +4891,7 @@ exports.EnemyController = EnemyController;
 
 
 /***/ }),
-/* 34 */
+/* 33 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5003,7 +4935,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var engine_1 = __webpack_require__(0);
-var state_machine_1 = __webpack_require__(37);
+var state_machine_1 = __webpack_require__(36);
 var neutral_state_1 = __webpack_require__(2);
 var alive_db_1 = __webpack_require__(6);
 var tile_db_1 = __webpack_require__(1);
@@ -5147,7 +5079,7 @@ exports.Enemy = Enemy;
 
 
 /***/ }),
-/* 35 */
+/* 34 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5203,7 +5135,7 @@ exports.Node = Node;
 
 
 /***/ }),
-/* 36 */
+/* 35 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5276,7 +5208,7 @@ exports.CollectResourceState = CollectResourceState;
 
 
 /***/ }),
-/* 37 */
+/* 36 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5330,6 +5262,74 @@ exports.StateMachine = StateMachine;
 
 
 /***/ }),
+/* 37 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+var state_1 = __webpack_require__(3);
+var engine_1 = __webpack_require__(0);
+var WanderState = (function (_super) {
+    __extends(WanderState, _super);
+    function WanderState(self, targetSpeed) {
+        if (targetSpeed === void 0) { targetSpeed = 30 * (2 + Math.random() * 1); }
+        var _this = _super.call(this, self) || this;
+        _this.targetSpeed = targetSpeed;
+        _this.steeringDirection = 0;
+        _this.turnSpeed = 1;
+        _this.newSteeringDir = 0;
+        return _this;
+    }
+    Object.defineProperty(WanderState.prototype, "stateName", {
+        get: function () {
+            return 'wandering';
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(WanderState.prototype, "stateStatus", {
+        get: function () {
+            return 'confused';
+        },
+        enumerable: true,
+        configurable: true
+    });
+    WanderState.prototype.tick = function (delta) {
+        var controller = this.self.controller;
+        var states = this.self.states;
+        this.self.speed += (this.targetSpeed - this.self.speed) * (1 - Math.pow(1 - delta, 2));
+        this.newSteeringDir -= delta;
+        if (this.newSteeringDir <= 0) {
+            this.steeringDirection = engine_1.clamp(this.steeringDirection + (Math.random() - .5) * 2, -1, 1);
+            this.newSteeringDir = .25;
+        }
+        this.self.direction += this.turnSpeed * 1.2 * this.steeringDirection;
+        _super.prototype.tick.call(this, delta);
+    };
+    WanderState.prototype.renderImpl = function (context) {
+        _super.prototype.renderImpl.call(this, context);
+        context.fillStyle = 'lightgrey';
+        context.fillRect(20, -11, 2, 22);
+        context.fillStyle = 'red';
+        context.fillRect(20, -1 - (10 * this.steeringDirection), 2, 2);
+    };
+    return WanderState;
+}(state_1.State));
+exports.WanderState = WanderState;
+
+
+/***/ }),
 /* 38 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -5354,11 +5354,13 @@ var BatController = (function (_super) {
         var _this = _super.call(this, "BirdController", { shouldRender: false }) || this;
         _this._bats = [];
         _this.renderMode = 'none';
+        _this.enableFlocking = false;
         return _this;
     }
     Object.defineProperty(BatController.prototype, "debugControls", {
         get: function () {
             return [
+                { key: 'B', name: 'enable flocking', state: this.enableFlocking },
                 { key: 'F', name: 'flocking render mode', state: this.renderMode }
             ];
         },
@@ -5384,16 +5386,26 @@ var BatController = (function (_super) {
             x: (-.5 + Math.random()) * 3000,
             y: (-.5 + Math.random()) * 3000
         };
-        var bird = new bat_1.Bat(this, opts);
-        this._bats.push(bird);
-        this.game.scene.addObject(bird);
+        var bat = new bat_1.Bat(this, opts);
+        bat.shouldTick = bat.shouldRender = this.enableFlocking;
+        this._bats.push(bat);
+        this.game.scene.addObject(bat);
     };
     BatController.prototype.handleEvent = function (evt) {
-        if (evt.type == 'keyPressed' && evt.code == 'KeyF') {
-            this.renderMode = (this.renderMode == 'none') ? 'single' :
-                (this.renderMode == 'single') ? 'all' :
-                    'none';
-            this.updateRenderDebugInfo();
+        if (evt.type === 'keyPressed') {
+            if (evt.code === 'KeyF') {
+                this.renderMode = (this.renderMode == 'none') ? 'single' :
+                    (this.renderMode == 'single') ? 'all' :
+                        'none';
+                this.updateRenderDebugInfo();
+            }
+            else if (evt.code === 'KeyB') {
+                this.enableFlocking = !this.enableFlocking;
+                for (var _i = 0, _a = this.bats; _i < _a.length; _i++) {
+                    var bat = _a[_i];
+                    bat.shouldTick = bat.shouldRender = this.enableFlocking;
+                }
+            }
         }
     };
     BatController.prototype.updateRenderDebugInfo = function () {
@@ -5595,7 +5607,7 @@ exports.GridRenderer = GridRenderer;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var rts_game_1 = __webpack_require__(22);
+var rts_game_1 = __webpack_require__(21);
 var game = new rts_game_1.RtsGame();
 game.start();
 
@@ -5794,8 +5806,8 @@ var world_1 = __webpack_require__(47);
 var grid_renderer_1 = __webpack_require__(40);
 var player_1 = __webpack_require__(42);
 var bat_controller_1 = __webpack_require__(38);
-var enemy_controller_1 = __webpack_require__(33);
-var debug_controls_1 = __webpack_require__(32);
+var enemy_controller_1 = __webpack_require__(32);
+var debug_controls_1 = __webpack_require__(31);
 var FlockingScene = (function (_super) {
     __extends(FlockingScene, _super);
     function FlockingScene() {
