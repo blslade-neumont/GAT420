@@ -1,7 +1,6 @@
 ﻿import { State, StateStatusT } from './state';
 import { PathfindState } from './pathfind-state';
 import { NeutralState } from './neutral-state';
-import { StateMachine } from './state-machine';
 import { ReturnToBaseState } from './return-to-base-state';
 import { Enemy } from '../enemy';
 import { tiles, TILE_SIZE } from '../../dbs/tile-db';
@@ -17,8 +16,8 @@ export class CollectResourceState extends PathfindState {
         return 'foraging';
     }
 
-    tick(machine: StateMachine, delta: number) {
-        super.tick(machine, delta);
+    tick(delta: number) {
+        let machine = this.self.states;
         if (!this.path) {
             this.collectingResource += delta;
             if (this.collectingResource > 1) {
@@ -29,12 +28,13 @@ export class CollectResourceState extends PathfindState {
                 else machine.currentState = newState;
             }
         }
+        super.tick(delta);
     }
 
     collectingResource: number = 0;
 
-    render(states: StateMachine, context: CanvasRenderingContext2D) {
-        super.render(states, context);
+    render(context: CanvasRenderingContext2D) {
+        super.render(context);
         if (this.collectingResource > 0) {
             let left = (this.resourcex + .2) * TILE_SIZE;
             let width = TILE_SIZE * .6;

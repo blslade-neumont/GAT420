@@ -1,13 +1,14 @@
 ﻿import { State, StateStatusT } from './state';
-import { PathfindState } from './pathfind-state';
-import { StateMachine } from './state-machine';
 import { Enemy } from '../enemy';
 import { TILE_SIZE } from '../../dbs/tile-db';
+import { pointDistance } from '../../utils/math';
 
-export class WanderState extends PathfindState {
-    constructor(self: Enemy, canSeeFOW = true) {
-        super(self, 30 * (2 + Math.random() * 1), canSeeFOW);
+export class WanderState extends State {
+    constructor(self: Enemy) {
+        super(self);
     }
+
+    targetSpeed = 30 * (2 + Math.random() * 1);
 
     get stateName() {
         return 'wandering';
@@ -16,12 +17,16 @@ export class WanderState extends PathfindState {
         return 'confused';
     }
 
-    tick(machine: StateMachine, delta: number) {
-        if (!this.path) {
-            let targetx = Math.floor((this.self.x + (Math.random() * 3000) - 1500) / TILE_SIZE);
-            let targety = Math.floor((this.self.y + (Math.random() * 3000) - 1500) / TILE_SIZE);
-            this.findPath(targetx, targety);
-        }
-        super.tick(machine, delta);
+    tick(delta: number) {
+        let controller = this.self.controller;
+        let states = this.self.states;
+
+        let player = this.self.player;
+        let dist = pointDistance(this.self.x, this.self.y, player.x + 16, player.y + 16);
+        this.self.speed += (Math.min(this.targetSpeed, Math.max(dist - 32, 0)) - this.self.speed) * (1 - Math.pow(1 - delta, 2));
+
+        this.self.steerTowards(delta, player.x + 16, player.y + 16);
+
+        super.tick(delta);
     }
 }

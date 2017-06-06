@@ -1,7 +1,6 @@
 ﻿import { State, StateStatusT } from './state';
 import { PathfindState } from './pathfind-state';
 import { NeutralState } from './neutral-state';
-import { StateMachine } from './state-machine';
 import { CollectResourceState } from './collect-resource-state';
 import { Enemy } from '../enemy';
 import { tiles, TILE_SIZE } from '../../dbs/tile-db';
@@ -15,8 +14,9 @@ export class ExploreState extends PathfindState {
         return 'exploring';
     }
 
-    tick(machine: StateMachine, delta: number) {
+    tick(delta: number) {
         let controller = this.self.controller;
+        let machine = this.self.states;
         let found = false;
         for (let q = 10; q < 100; q++) {
             let size = TILE_SIZE * Math.sqrt(q);
@@ -45,6 +45,6 @@ export class ExploreState extends PathfindState {
             let targety = Math.floor((this.self.y + (Math.random() * 3000) - 1500) / TILE_SIZE);
             this.findPath(targetx, targety);
         }
-        super.tick(machine, delta);
+        super.tick(delta);
     }
 }

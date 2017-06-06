@@ -18,17 +18,20 @@ export class StateMachine {
         this._changingState = true;
         let prev = this._currentState;
         try {
-            if (this._currentState) this._currentState.onExit(this, val);
+            if (this._currentState) this._currentState.onExit(val);
             this._currentState = val;
-            if (this._currentState) this._currentState.onEnter(this, prev);
+            if (this._currentState) this._currentState.onEnter(prev);
         }
         finally { this._changingState = false; }
     }
 
     tick(delta: number) {
-        this.currentState.tick(this, delta);
+        this.currentState.tick(delta);
     }
     render(context: CanvasRenderingContext2D) {
-        this.currentState.render(this, context);
+        this.currentState.render(context);
+    }
+    renderImpl(context: CanvasRenderingContext2D) {
+        this.currentState.renderImpl(context);
     }
 }

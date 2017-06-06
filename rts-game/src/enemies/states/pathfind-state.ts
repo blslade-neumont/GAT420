@@ -1,6 +1,5 @@
 ﻿import { pointDirection } from '../../engine';
 import { State } from './state';
-import { StateMachine } from './state-machine';
 import { Enemy } from '../enemy';
 import { Path } from '../path';
 import { Node } from '../node';
@@ -36,13 +35,13 @@ export abstract class PathfindState extends State {
     }
 
     private currentIdx = 0;
-    turnRadius = 30;
-    directionChangeSpeed = 180;
-    directionTolerance = 15;
+    followPathRadius = 30;
 
     onCompletedPath() { }
 
-    tick(machine: StateMachine, delta: number) {
+    tick(delta: number) {
+        super.tick(delta);
+        
         if (!this.path) {
             this.self.speed += -this.self.speed * (1 - Math.pow(1 - delta, 2));
             return;
@@ -71,25 +70,15 @@ export abstract class PathfindState extends State {
             }
             targeting = nodes[this.currentIdx];
             let dist2 = pointDistance2(this.self.x, this.self.y, (targeting.x + .5) * TILE_SIZE, (targeting.y + .5) * TILE_SIZE);
-            if (dist2 > this.turnRadius * this.turnRadius || (this.arrive && this.currentIdx == nodes.length - 1 && dist2 > 4)) break;
+            if (dist2 > this.followPathRadius * this.followPathRadius || (this.arrive && this.currentIdx == nodes.length - 1 && dist2 > 4)) break;
             this.currentIdx++;
         }
 
-        let dir = pointDirection(this.self.x, this.self.y, (targeting.x + .5) * TILE_SIZE, (targeting.y + .5) * TILE_SIZE);
-        if (dir > this.self.direction + 180) dir -= 360;
-        else if (dir < this.self.direction - 180) dir += 360;
-        let dirChange = 0;
-        if (dir > this.self.direction + this.directionTolerance) {
-            dirChange = Math.min(dir - this.self.direction, this.directionChangeSpeed * delta);
-        }
-        else if (dir < this.self.direction - this.directionTolerance) {
-            dirChange = Math.max(dir - this.self.direction, -this.directionChangeSpeed * delta);
-        }
-        this.self.direction += dirChange;
+        this.self.steerTowards(delta, (targeting.x + .5) * TILE_SIZE, (targeting.y + .5) * TILE_SIZE);
     }
 
-    render(machine: StateMachine, context: CanvasRenderingContext2D) {
-        super.render(machine, context);
+    render(context: CanvasRenderingContext2D) {
+        super.render(context);
         if (this.path && this.self.renderDebugInfo) {
             context.strokeStyle = 'red';
             context.beginPath();
@@ -107,7 +96,7 @@ export abstract class PathfindState extends State {
 
             context.strokeStyle = 'blue';
             context.beginPath();
-            context.ellipse(this.self.x, this.self.y, this.turnRadius, this.turnRadius, 0, 0, 2 * Math.PI);
+            context.ellipse(this.self.x, this.self.y, this.followPathRadius, this.followPathRadius, 0, 0, 2 * Math.PI);
             context.stroke();
         }
     }

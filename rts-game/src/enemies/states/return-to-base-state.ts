@@ -1,7 +1,6 @@
 ﻿import { State, StateStatusT } from './state';
 import { PathfindState } from './pathfind-state';
 import { NeutralState } from './neutral-state';
-import { StateMachine } from './state-machine';
 import { ExploreState } from './explore-state';
 import { Enemy } from '../enemy';
 import { TILE_SIZE } from '../../dbs/tile-db';
@@ -28,10 +27,10 @@ export class ReturnToBaseState extends PathfindState {
         }
     }
 
-    tick(states: StateMachine, delta: number) {
+    tick(delta: number) {
         if (!this.path) {
             this.findPath(this.self.controller.baseCoords[0] + 1, this.self.controller.baseCoords[1] + 1, true);
         }
-        super.tick(states, delta);
+        super.tick(delta);
     }
 }

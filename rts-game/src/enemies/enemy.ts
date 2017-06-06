@@ -2,10 +2,12 @@ import { GameObject, GameObjectOptions } from '../engine';
 import { EnemyController } from './enemy-controller';
 import { StateMachine } from './states/state-machine';
 import { NeutralState } from './states/neutral-state';
+import { WanderState } from './states/wander-state';
 import { alives } from '../dbs/alive-db';
 import { TILE_SIZE } from '../dbs/tile-db';
 import merge = require('lodash.merge');
 import { pointDistance, pointDistance2 } from '../utils/math';
+import { pointDirection } from '../engine';
 
 const FOW_CLEAR_RESET_TIME = .5;
 
@@ -15,7 +17,8 @@ export class Enemy extends GameObject {
             sprite: alives['enemy'].sprite,
             direction: Math.random() * 360
         }, opts));
-        this._states = new StateMachine(new NeutralState(this));
+        // this._states = new StateMachine(new NeutralState(this));
+        this._states = new StateMachine(new WanderState(this));
     }
 
     renderDebugInfo = false;
@@ -82,11 +85,35 @@ export class Enemy extends GameObject {
         this._states.render(context);
         super.render(context);
 
-        if (this.renderDebugInfo) {
+        if (this.renderDebugInfo && this.recomputeLineOfSight > 0) {
             context.fillStyle = 'rgba(1, 0, 0, .2)';
             for (let [x, y] of this.playerLineOfSight) {
                 context.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
             }
         }
+    }
+    renderImpl(context: CanvasRenderingContext2D) {
+        this._states.renderImpl(context);
+        super.renderImpl(context);
+    }
+
+    directionChangeSpeed = 180;
+    directionTolerance = 15;
+
+    steerTowards(delta: number, dir: number);
+    steerTowards(delta: number, x: number, y: number);
+    steerTowards(delta: number, dir: number, y?: number) {
+        if (typeof y !== 'undefined') dir = pointDirection(this.x, this.y, dir, y);
+        
+        if (dir > this.direction + 180) dir -= 360;
+        else if (dir < this.direction - 180) dir += 360;
+        let dirChange = 0;
+        if (dir > this.direction + this.directionTolerance) {
+            dirChange = Math.min(dir - this.direction, this.directionChangeSpeed * delta);
+        }
+        else if (dir < this.direction - this.directionTolerance) {
+            dirChange = Math.max(dir - this.direction, -this.directionChangeSpeed * delta);
+        }
+        this.direction += dirChange;
     }
 }

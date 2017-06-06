@@ -177,15 +177,15 @@ var NeutralState = (function (_super) {
         enumerable: true,
         configurable: true
     });
-    NeutralState.prototype.tick = function (states, delta) {
+    NeutralState.prototype.tick = function (delta) {
         var controller = this.self.controller;
         if (controller.canSeePlayer && this.self.canSeePlayer) {
             if (controller.afraidOfPlayer) {
-                states.currentState = new flee_state_1.FleeState(this.self);
+                this.self.states.currentState = new flee_state_1.FleeState(this.self);
                 return;
             }
             else {
-                states.currentState = new attack_state_1.AttackState(this.self);
+                this.self.states.currentState = new attack_state_1.AttackState(this.self);
                 return;
             }
         }
@@ -193,14 +193,14 @@ var NeutralState = (function (_super) {
             this.substate = new return_to_base_state_1.ReturnToBaseState(this.self);
             return;
         }
-        _super.prototype.tick.call(this, states, delta);
+        _super.prototype.tick.call(this, delta);
         if (this.substate)
-            this.substate.tick(states, delta);
+            this.substate.tick(delta);
     };
-    NeutralState.prototype.render = function (states, context) {
-        _super.prototype.render.call(this, states, context);
+    NeutralState.prototype.render = function (context) {
+        _super.prototype.render.call(this, context);
         if (this.substate)
-            this.substate.render(states, context);
+            this.substate.render(context);
     };
     return NeutralState;
 }(state_1.State));
@@ -339,7 +339,6 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-var engine_1 = __webpack_require__(1);
 var state_1 = __webpack_require__(6);
 var path_1 = __webpack_require__(18);
 var tile_db_1 = __webpack_require__(0);
@@ -355,9 +354,7 @@ var PathfindState = (function (_super) {
         _this.arrive = arrive;
         _this.findNeighborsFn = null;
         _this.currentIdx = 0;
-        _this.turnRadius = 30;
-        _this.directionChangeSpeed = 180;
-        _this.directionTolerance = 15;
+        _this.followPathRadius = 30;
         if (!canSeeFOW)
             _this.findNeighborsFn = _this.findNeighborsFOW.bind(_this);
         return _this;
@@ -388,7 +385,8 @@ var PathfindState = (function (_super) {
         return true;
     };
     PathfindState.prototype.onCompletedPath = function () { };
-    PathfindState.prototype.tick = function (machine, delta) {
+    PathfindState.prototype.tick = function (delta) {
+        _super.prototype.tick.call(this, delta);
         if (!this.path) {
             this.self.speed += -this.self.speed * (1 - Math.pow(1 - delta, 2));
             return;
@@ -416,26 +414,14 @@ var PathfindState = (function (_super) {
             }
             targeting = nodes[this.currentIdx];
             var dist2 = math_1.pointDistance2(this.self.x, this.self.y, (targeting.x + .5) * tile_db_1.TILE_SIZE, (targeting.y + .5) * tile_db_1.TILE_SIZE);
-            if (dist2 > this.turnRadius * this.turnRadius || (this.arrive && this.currentIdx == nodes.length - 1 && dist2 > 4))
+            if (dist2 > this.followPathRadius * this.followPathRadius || (this.arrive && this.currentIdx == nodes.length - 1 && dist2 > 4))
                 break;
             this.currentIdx++;
         }
-        var dir = engine_1.pointDirection(this.self.x, this.self.y, (targeting.x + .5) * tile_db_1.TILE_SIZE, (targeting.y + .5) * tile_db_1.TILE_SIZE);
-        if (dir > this.self.direction + 180)
-            dir -= 360;
-        else if (dir < this.self.direction - 180)
-            dir += 360;
-        var dirChange = 0;
-        if (dir > this.self.direction + this.directionTolerance) {
-            dirChange = Math.min(dir - this.self.direction, this.directionChangeSpeed * delta);
-        }
-        else if (dir < this.self.direction - this.directionTolerance) {
-            dirChange = Math.max(dir - this.self.direction, -this.directionChangeSpeed * delta);
-        }
-        this.self.direction += dirChange;
+        this.self.steerTowards(delta, (targeting.x + .5) * tile_db_1.TILE_SIZE, (targeting.y + .5) * tile_db_1.TILE_SIZE);
     };
-    PathfindState.prototype.render = function (machine, context) {
-        _super.prototype.render.call(this, machine, context);
+    PathfindState.prototype.render = function (context) {
+        _super.prototype.render.call(this, context);
         if (this.path && this.self.renderDebugInfo) {
             context.strokeStyle = 'red';
             context.beginPath();
@@ -451,7 +437,7 @@ var PathfindState = (function (_super) {
             }
             context.strokeStyle = 'blue';
             context.beginPath();
-            context.ellipse(this.self.x, this.self.y, this.turnRadius, this.turnRadius, 0, 0, 2 * Math.PI);
+            context.ellipse(this.self.x, this.self.y, this.followPathRadius, this.followPathRadius, 0, 0, 2 * Math.PI);
             context.stroke();
         }
     };
@@ -485,13 +471,13 @@ var State = (function () {
         enumerable: true,
         configurable: true
     });
-    State.prototype.onEnter = function (machine, previousState) {
+    State.prototype.onEnter = function (previousState) {
     };
-    State.prototype.onExit = function (machine, nextState) {
+    State.prototype.onExit = function (nextState) {
     };
-    State.prototype.tick = function (machine, delta) {
+    State.prototype.tick = function (delta) {
     };
-    State.prototype.render = function (machine, context) {
+    State.prototype.render = function (context) {
         if (!this.renderDebugInfo)
             return;
         context.fillStyle = this.stateStatus == 'ok' ? 'white' :
@@ -511,6 +497,8 @@ var State = (function () {
         context.textAlign = 'left';
         context.textBaseline = 'bottom';
         context.fillText('- ' + this.stateName, this.self.x, this.self.y - 24);
+    };
+    State.prototype.renderImpl = function (context) {
     };
     return State;
 }());
@@ -2988,8 +2976,9 @@ var ExploreState = (function (_super) {
         enumerable: true,
         configurable: true
     });
-    ExploreState.prototype.tick = function (machine, delta) {
+    ExploreState.prototype.tick = function (delta) {
         var controller = this.self.controller;
+        var machine = this.self.states;
         var found = false;
         for (var q = 10; q < 100; q++) {
             var size = tile_db_1.TILE_SIZE * Math.sqrt(q);
@@ -3018,7 +3007,7 @@ var ExploreState = (function (_super) {
             var targety = Math.floor((this.self.y + (Math.random() * 3000) - 1500) / tile_db_1.TILE_SIZE);
             this.findPath(targetx, targety);
         }
-        _super.prototype.tick.call(this, machine, delta);
+        _super.prototype.tick.call(this, delta);
     };
     return ExploreState;
 }(pathfind_state_1.PathfindState));
@@ -3072,11 +3061,11 @@ var ReturnToBaseState = (function (_super) {
                 machine.currentState = newState;
         }
     };
-    ReturnToBaseState.prototype.tick = function (states, delta) {
+    ReturnToBaseState.prototype.tick = function (delta) {
         if (!this.path) {
             this.findPath(this.self.controller.baseCoords[0] + 1, this.self.controller.baseCoords[1] + 1, true);
         }
-        _super.prototype.tick.call(this, states, delta);
+        _super.prototype.tick.call(this, delta);
     };
     return ReturnToBaseState;
 }(pathfind_state_1.PathfindState));
@@ -3903,7 +3892,6 @@ var state_1 = __webpack_require__(6);
 var neutral_state_1 = __webpack_require__(2);
 var flee_state_1 = __webpack_require__(20);
 var math_1 = __webpack_require__(7);
-var engine_1 = __webpack_require__(1);
 var AttackState = (function (_super) {
     __extends(AttackState, _super);
     function AttackState(self, substate, targetSpeed) {
@@ -3912,8 +3900,6 @@ var AttackState = (function (_super) {
         var _this = _super.call(this, self) || this;
         _this.substate = substate;
         _this.targetSpeed = targetSpeed;
-        _this.directionChangeSpeed = 180;
-        _this.directionTolerance = 15;
         return _this;
     }
     Object.defineProperty(AttackState.prototype, "stateStatus", {
@@ -3930,8 +3916,9 @@ var AttackState = (function (_super) {
         enumerable: true,
         configurable: true
     });
-    AttackState.prototype.tick = function (states, delta) {
+    AttackState.prototype.tick = function (delta) {
         var controller = this.self.controller;
+        var states = this.self.states;
         if (!controller.canSeePlayer || (!this.self.canSeePlayer && !this.substate)) {
             states.currentState = new neutral_state_1.NeutralState(this.self);
             return;
@@ -3940,30 +3927,18 @@ var AttackState = (function (_super) {
             states.currentState = new flee_state_1.FleeState(this.self);
             return;
         }
-        _super.prototype.tick.call(this, states, delta);
-        if (this.substate)
-            this.substate.tick(states, delta);
         var player = this.self.player;
-        var dir = engine_1.pointDirection(this.self.x, this.self.y, player.x + 16, player.y + 16);
         var dist = math_1.pointDistance(this.self.x, this.self.y, player.x + 16, player.y + 16);
         this.self.speed += (Math.min(this.targetSpeed, Math.max(dist - 32, 0)) - this.self.speed) * (1 - Math.pow(1 - delta, 2));
-        if (dir > this.self.direction + 180)
-            dir -= 360;
-        else if (dir < this.self.direction - 180)
-            dir += 360;
-        var dirChange = 0;
-        if (dir > this.self.direction + this.directionTolerance) {
-            dirChange = Math.min(dir - this.self.direction, this.directionChangeSpeed * delta);
-        }
-        else if (dir < this.self.direction - this.directionTolerance) {
-            dirChange = Math.max(dir - this.self.direction, -this.directionChangeSpeed * delta);
-        }
-        this.self.direction += dirChange;
-    };
-    AttackState.prototype.render = function (states, context) {
-        _super.prototype.render.call(this, states, context);
+        this.self.steerTowards(delta, player.x + 16, player.y + 16);
+        _super.prototype.tick.call(this, delta);
         if (this.substate)
-            this.substate.render(states, context);
+            this.substate.tick(delta);
+    };
+    AttackState.prototype.render = function (context) {
+        _super.prototype.render.call(this, context);
+        if (this.substate)
+            this.substate.render(context);
     };
     return AttackState;
 }(state_1.State));
@@ -4012,8 +3987,9 @@ var FleeState = (function (_super) {
         enumerable: true,
         configurable: true
     });
-    FleeState.prototype.tick = function (states, delta) {
+    FleeState.prototype.tick = function (delta) {
         var controller = this.self.controller;
+        var states = this.self.states;
         if (!controller.canSeePlayer || !this.self.canSeePlayer) {
             states.currentState = new neutral_state_1.NeutralState(this.self);
             return;
@@ -4022,14 +3998,14 @@ var FleeState = (function (_super) {
             states.currentState = new attack_state_1.AttackState(this.self);
             return;
         }
-        _super.prototype.tick.call(this, states, delta);
+        _super.prototype.tick.call(this, delta);
         if (this.substate)
-            this.substate.tick(states, delta);
+            this.substate.tick(delta);
     };
-    FleeState.prototype.render = function (states, context) {
-        _super.prototype.render.call(this, states, context);
+    FleeState.prototype.render = function (context) {
+        _super.prototype.render.call(this, context);
         if (this.substate)
-            this.substate.render(states, context);
+            this.substate.render(context);
     };
     return FleeState;
 }(state_1.State));
@@ -4960,11 +4936,12 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 Object.defineProperty(exports, "__esModule", { value: true });
 var engine_1 = __webpack_require__(1);
 var state_machine_1 = __webpack_require__(36);
-var neutral_state_1 = __webpack_require__(2);
+var wander_state_1 = __webpack_require__(37);
 var alive_db_1 = __webpack_require__(4);
 var tile_db_1 = __webpack_require__(0);
 var merge = __webpack_require__(8);
 var math_1 = __webpack_require__(7);
+var engine_2 = __webpack_require__(1);
 var FOW_CLEAR_RESET_TIME = .5;
 var Enemy = (function (_super) {
     __extends(Enemy, _super);
@@ -4982,7 +4959,9 @@ var Enemy = (function (_super) {
         _this.playerLineOfSight = [];
         _this._fowClearTime = Math.random() * FOW_CLEAR_RESET_TIME;
         _this.fowClearDistance = 4;
-        _this._states = new state_machine_1.StateMachine(new neutral_state_1.NeutralState(_this));
+        _this.directionChangeSpeed = 180;
+        _this.directionTolerance = 15;
+        _this._states = new state_machine_1.StateMachine(new wander_state_1.WanderState(_this));
         return _this;
     }
     Object.defineProperty(Enemy.prototype, "states", {
@@ -5066,13 +5045,33 @@ var Enemy = (function (_super) {
     Enemy.prototype.render = function (context) {
         this._states.render(context);
         _super.prototype.render.call(this, context);
-        if (this.renderDebugInfo) {
+        if (this.renderDebugInfo && this.recomputeLineOfSight > 0) {
             context.fillStyle = 'rgba(1, 0, 0, .2)';
             for (var _i = 0, _a = this.playerLineOfSight; _i < _a.length; _i++) {
                 var _b = _a[_i], x = _b[0], y = _b[1];
                 context.fillRect(x * tile_db_1.TILE_SIZE, y * tile_db_1.TILE_SIZE, tile_db_1.TILE_SIZE, tile_db_1.TILE_SIZE);
             }
         }
+    };
+    Enemy.prototype.renderImpl = function (context) {
+        this._states.renderImpl(context);
+        _super.prototype.renderImpl.call(this, context);
+    };
+    Enemy.prototype.steerTowards = function (delta, dir, y) {
+        if (typeof y !== 'undefined')
+            dir = engine_2.pointDirection(this.x, this.y, dir, y);
+        if (dir > this.direction + 180)
+            dir -= 360;
+        else if (dir < this.direction - 180)
+            dir += 360;
+        var dirChange = 0;
+        if (dir > this.direction + this.directionTolerance) {
+            dirChange = Math.min(dir - this.direction, this.directionChangeSpeed * delta);
+        }
+        else if (dir < this.direction - this.directionTolerance) {
+            dirChange = Math.max(dir - this.direction, -this.directionChangeSpeed * delta);
+        }
+        this.direction += dirChange;
     };
     return Enemy;
 }(engine_1.GameObject));
@@ -5174,8 +5173,8 @@ var CollectResourceState = (function (_super) {
         enumerable: true,
         configurable: true
     });
-    CollectResourceState.prototype.tick = function (machine, delta) {
-        _super.prototype.tick.call(this, machine, delta);
+    CollectResourceState.prototype.tick = function (delta) {
+        var machine = this.self.states;
         if (!this.path) {
             this.collectingResource += delta;
             if (this.collectingResource > 1) {
@@ -5188,9 +5187,10 @@ var CollectResourceState = (function (_super) {
                     machine.currentState = newState;
             }
         }
+        _super.prototype.tick.call(this, delta);
     };
-    CollectResourceState.prototype.render = function (states, context) {
-        _super.prototype.render.call(this, states, context);
+    CollectResourceState.prototype.render = function (context) {
+        _super.prototype.render.call(this, context);
         if (this.collectingResource > 0) {
             var left = (this.resourcex + .2) * tile_db_1.TILE_SIZE;
             var width = tile_db_1.TILE_SIZE * .6;
@@ -5235,10 +5235,10 @@ var StateMachine = (function () {
             var prev = this._currentState;
             try {
                 if (this._currentState)
-                    this._currentState.onExit(this, val);
+                    this._currentState.onExit(val);
                 this._currentState = val;
                 if (this._currentState)
-                    this._currentState.onEnter(this, prev);
+                    this._currentState.onEnter(prev);
             }
             finally {
                 this._changingState = false;
@@ -5248,10 +5248,13 @@ var StateMachine = (function () {
         configurable: true
     });
     StateMachine.prototype.tick = function (delta) {
-        this.currentState.tick(this, delta);
+        this.currentState.tick(delta);
     };
     StateMachine.prototype.render = function (context) {
-        this.currentState.render(this, context);
+        this.currentState.render(context);
+    };
+    StateMachine.prototype.renderImpl = function (context) {
+        this.currentState.renderImpl(context);
     };
     return StateMachine;
 }());
@@ -5275,13 +5278,14 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-var pathfind_state_1 = __webpack_require__(5);
-var tile_db_1 = __webpack_require__(0);
+var state_1 = __webpack_require__(6);
+var math_1 = __webpack_require__(7);
 var WanderState = (function (_super) {
     __extends(WanderState, _super);
-    function WanderState(self, canSeeFOW) {
-        if (canSeeFOW === void 0) { canSeeFOW = true; }
-        return _super.call(this, self, 30 * (2 + Math.random() * 1), canSeeFOW) || this;
+    function WanderState(self) {
+        var _this = _super.call(this, self) || this;
+        _this.targetSpeed = 30 * (2 + Math.random() * 1);
+        return _this;
     }
     Object.defineProperty(WanderState.prototype, "stateName", {
         get: function () {
@@ -5297,16 +5301,17 @@ var WanderState = (function (_super) {
         enumerable: true,
         configurable: true
     });
-    WanderState.prototype.tick = function (machine, delta) {
-        if (!this.path) {
-            var targetx = Math.floor((this.self.x + (Math.random() * 3000) - 1500) / tile_db_1.TILE_SIZE);
-            var targety = Math.floor((this.self.y + (Math.random() * 3000) - 1500) / tile_db_1.TILE_SIZE);
-            this.findPath(targetx, targety);
-        }
-        _super.prototype.tick.call(this, machine, delta);
+    WanderState.prototype.tick = function (delta) {
+        var controller = this.self.controller;
+        var states = this.self.states;
+        var player = this.self.player;
+        var dist = math_1.pointDistance(this.self.x, this.self.y, player.x + 16, player.y + 16);
+        this.self.speed += (Math.min(this.targetSpeed, Math.max(dist - 32, 0)) - this.self.speed) * (1 - Math.pow(1 - delta, 2));
+        this.self.steerTowards(delta, player.x + 16, player.y + 16);
+        _super.prototype.tick.call(this, delta);
     };
     return WanderState;
-}(pathfind_state_1.PathfindState));
+}(state_1.State));
 exports.WanderState = WanderState;
 
 

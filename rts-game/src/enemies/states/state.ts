@@ -16,14 +16,14 @@ export abstract class State {
         return 'ok';
     }
 
-    onEnter(machine: StateMachine, previousState: State | null) {
+    onEnter(previousState: State | null) {
     }
-    onExit(machine: StateMachine, nextState: State) {
+    onExit(nextState: State) {
     }
 
-    tick(machine: StateMachine, delta: number) {
+    tick(delta: number) {
     }
-    render(machine: StateMachine, context: CanvasRenderingContext2D) {
+    render(context: CanvasRenderingContext2D) {
         if (!this.renderDebugInfo) return;
 
         context.fillStyle = this.stateStatus == 'ok' ? 'white' :
@@ -44,5 +44,7 @@ export abstract class State {
         context.textAlign = 'left';
         context.textBaseline = 'bottom';
         context.fillText('- ' + this.stateName, this.self.x, this.self.y - 24);
+    }
+    renderImpl(context: CanvasRenderingContext2D) {
     }
 }
