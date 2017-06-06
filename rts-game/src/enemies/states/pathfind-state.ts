@@ -5,7 +5,7 @@ import { Enemy } from '../enemy';
 import { Path } from '../path';
 import { Node } from '../node';
 import { TILE_SIZE } from '../../dbs/tile-db';
-import { pointDistance2 } from '../../utils/math';
+import { pointDistance, pointDistance2 } from '../../utils/math';
 
 export abstract class PathfindState extends State {
     constructor(self: Enemy, private targetSpeed: number, private canSeeFOW = false, private arrive = false) {
@@ -43,13 +43,19 @@ export abstract class PathfindState extends State {
     onCompletedPath() { }
 
     tick(machine: StateMachine, delta: number) {
-        if (!this.path || (this.arrive && this.currentIdx == this.path.nodes.length - 1)) {
+        if (!this.path) {
             this.self.speed += -this.self.speed * (1 - Math.pow(1 - delta, 2));
-            if (this.path) {
+            return;
+        }
+        else if (this.path && this.arrive && this.currentIdx == this.path.nodes.length - 1) {
+            let targeting = this.path.nodes[this.currentIdx];
+            let dist = pointDistance(this.self.x, this.self.y, (targeting.x + .5) * TILE_SIZE, (targeting.y + .5) * TILE_SIZE);
+            let targetSpeed = Math.min(this.targetSpeed, dist);
+            this.self.speed += (targetSpeed - this.self.speed) * (1 - Math.pow(1 - delta, 2));
+            if (this.self.speed <= .01) {
                 this.onCompletedPath();
                 this.path = null;
             }
-            return;
         }
         else {
             this.self.speed += (this.targetSpeed - this.self.speed) * (1 - Math.pow(1 - delta, 2));
