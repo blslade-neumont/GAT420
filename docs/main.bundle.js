@@ -3902,12 +3902,18 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var state_1 = __webpack_require__(6);
 var neutral_state_1 = __webpack_require__(2);
 var flee_state_1 = __webpack_require__(20);
+var math_1 = __webpack_require__(7);
+var engine_1 = __webpack_require__(1);
 var AttackState = (function (_super) {
     __extends(AttackState, _super);
-    function AttackState(self, substate) {
+    function AttackState(self, substate, targetSpeed) {
         if (substate === void 0) { substate = null; }
+        if (targetSpeed === void 0) { targetSpeed = 30 * (2 + Math.random() * 1); }
         var _this = _super.call(this, self) || this;
         _this.substate = substate;
+        _this.targetSpeed = targetSpeed;
+        _this.directionChangeSpeed = 180;
+        _this.directionTolerance = 15;
         return _this;
     }
     Object.defineProperty(AttackState.prototype, "stateStatus", {
@@ -3937,6 +3943,22 @@ var AttackState = (function (_super) {
         _super.prototype.tick.call(this, states, delta);
         if (this.substate)
             this.substate.tick(states, delta);
+        var player = this.self.player;
+        var dir = engine_1.pointDirection(this.self.x, this.self.y, player.x + 16, player.y + 16);
+        var dist = math_1.pointDistance(this.self.x, this.self.y, player.x + 16, player.y + 16);
+        this.self.speed += (Math.min(this.targetSpeed, Math.max(dist - 32, 0)) - this.self.speed) * (1 - Math.pow(1 - delta, 2));
+        if (dir > this.self.direction + 180)
+            dir -= 360;
+        else if (dir < this.self.direction - 180)
+            dir += 360;
+        var dirChange = 0;
+        if (dir > this.self.direction + this.directionTolerance) {
+            dirChange = Math.min(dir - this.self.direction, this.directionChangeSpeed * delta);
+        }
+        else if (dir < this.self.direction - this.directionTolerance) {
+            dirChange = Math.max(dir - this.self.direction, -this.directionChangeSpeed * delta);
+        }
+        this.self.direction += dirChange;
     };
     AttackState.prototype.render = function (states, context) {
         _super.prototype.render.call(this, states, context);
