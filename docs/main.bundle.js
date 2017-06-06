@@ -5279,12 +5279,16 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 var state_1 = __webpack_require__(6);
-var math_1 = __webpack_require__(7);
+var engine_1 = __webpack_require__(1);
 var WanderState = (function (_super) {
     __extends(WanderState, _super);
-    function WanderState(self) {
+    function WanderState(self, targetSpeed) {
+        if (targetSpeed === void 0) { targetSpeed = 30 * (2 + Math.random() * 1); }
         var _this = _super.call(this, self) || this;
-        _this.targetSpeed = 30 * (2 + Math.random() * 1);
+        _this.targetSpeed = targetSpeed;
+        _this.steeringDirection = 0;
+        _this.turnSpeed = 1;
+        _this.newSteeringDir = 0;
         return _this;
     }
     Object.defineProperty(WanderState.prototype, "stateName", {
@@ -5304,11 +5308,21 @@ var WanderState = (function (_super) {
     WanderState.prototype.tick = function (delta) {
         var controller = this.self.controller;
         var states = this.self.states;
-        var player = this.self.player;
-        var dist = math_1.pointDistance(this.self.x, this.self.y, player.x + 16, player.y + 16);
-        this.self.speed += (Math.min(this.targetSpeed, Math.max(dist - 32, 0)) - this.self.speed) * (1 - Math.pow(1 - delta, 2));
-        this.self.steerTowards(delta, player.x + 16, player.y + 16);
+        this.self.speed += (this.targetSpeed - this.self.speed) * (1 - Math.pow(1 - delta, 2));
+        this.newSteeringDir -= delta;
+        if (this.newSteeringDir <= 0) {
+            this.steeringDirection = engine_1.clamp(this.steeringDirection + (Math.random() - .5) * 2, -1, 1);
+            this.newSteeringDir = .25;
+        }
+        this.self.direction += this.turnSpeed * 1.2 * this.steeringDirection;
         _super.prototype.tick.call(this, delta);
+    };
+    WanderState.prototype.renderImpl = function (context) {
+        _super.prototype.renderImpl.call(this, context);
+        context.fillStyle = 'lightgrey';
+        context.fillRect(20, -11, 2, 22);
+        context.fillStyle = 'red';
+        context.fillRect(20, -1 - (10 * this.steeringDirection), 2, 2);
     };
     return WanderState;
 }(state_1.State));

@@ -2,13 +2,15 @@
 import { Enemy } from '../enemy';
 import { TILE_SIZE } from '../../dbs/tile-db';
 import { pointDistance } from '../../utils/math';
+import { clamp } from '../../engine';
 
 export class WanderState extends State {
-    constructor(self: Enemy) {
+    constructor(self: Enemy, private targetSpeed: number = 30 * (2 + Math.random() * 1)) {
         super(self);
     }
 
-    targetSpeed = 30 * (2 + Math.random() * 1);
+    steeringDirection = 0; //-1 + Math.random() * 2;
+    turnSpeed = 1;
 
     get stateName() {
         return 'wandering';
@@ -17,16 +19,29 @@ export class WanderState extends State {
         return 'confused';
     }
 
+    private newSteeringDir = 0;
     tick(delta: number) {
         let controller = this.self.controller;
         let states = this.self.states;
 
-        let player = this.self.player;
-        let dist = pointDistance(this.self.x, this.self.y, player.x + 16, player.y + 16);
-        this.self.speed += (Math.min(this.targetSpeed, Math.max(dist - 32, 0)) - this.self.speed) * (1 - Math.pow(1 - delta, 2));
+        this.self.speed += (this.targetSpeed - this.self.speed) * (1 - Math.pow(1 - delta, 2));
 
-        this.self.steerTowards(delta, player.x + 16, player.y + 16);
+        this.newSteeringDir -= delta;
+        if (this.newSteeringDir <= 0) {
+            // this.steeringDirection = clamp(this.steeringDirection + ((Math.random() - .5) * (delta * 15)), -1, 1);
+            this.steeringDirection = clamp(this.steeringDirection + (Math.random() - .5) * 2, -1, 1);
+            this.newSteeringDir = .25;
+        }
+        this.self.direction += this.turnSpeed * 1.2 * this.steeringDirection;
 
         super.tick(delta);
+    }
+    
+    renderImpl(context: CanvasRenderingContext2D) {
+        super.renderImpl(context);
+        context.fillStyle = 'lightgrey';
+        context.fillRect(20, -11, 2, 22);
+        context.fillStyle = 'red';
+        context.fillRect(20, -1 - (10 * this.steeringDirection), 2, 2);
     }
 }
