@@ -2,7 +2,6 @@ import { GameObject, GameObjectOptions } from '../engine';
 import { EnemyController } from './enemy-controller';
 import { StateMachine } from './states/state-machine';
 import { NeutralState } from './states/neutral-state';
-import { WanderState } from './states/wander-state';
 import { alives } from '../dbs/alive-db';
 import { TILE_SIZE } from '../dbs/tile-db';
 import merge = require('lodash.merge');
@@ -17,8 +16,7 @@ export class Enemy extends GameObject {
             sprite: alives['enemy'].sprite,
             direction: Math.random() * 360
         }, opts));
-        // this._states = new StateMachine(new NeutralState(this));
-        this._states = new StateMachine(new WanderState(this));
+        this._states = new StateMachine(new NeutralState(this));
     }
 
     renderDebugInfo = false;

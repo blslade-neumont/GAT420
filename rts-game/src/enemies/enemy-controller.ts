@@ -41,7 +41,7 @@ export class EnemyController extends GameObject {
 
     addToScene(scene: GameScene) {
         super.addToScene(scene);
-        this.addEnemies(1);
+        this.addEnemies(10);
     }
 
     get debugControls(): any[] {
