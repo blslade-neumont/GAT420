@@ -163,6 +163,38 @@ export class EnemyController extends GameObject {
             }
         }
     }
+    
+    static isSolidHitCondition(tile: WorldTile) {
+        return tile.isSolid;
+    }
+    raycast(fromx: number, fromy: number, unitx: number, unity: number, maxDist = 500, hitCondition: (tile: WorldTile) => boolean = EnemyController.isSolidHitCondition): [number, WorldTile] {
+        let currx = fromx, curry = fromy;
+        let currTileX = Math.floor(fromx), currTileY = Math.floor(fromy);
+        let currDist = 0;
+        while (currDist <= maxDist) {
+            let tile = this.getTileAt(currTileX, currTileY);
+            if (hitCondition(tile)) return [currDist, tile];
+            let hunits = ((unitx > 0) ? (Math.floor(currx) + 1) - currx : (Math.ceil(currx) - 1) - currx) / unitx;
+            let vunits = ((unity > 0) ? (Math.floor(curry) + 1) - curry : (Math.ceil(curry) - 1) - curry) / unity;
+            let hdist: number, vdist: number;
+            if (hunits < vunits) {
+                hdist = hunits * unitx;
+                vdist = hunits * unity;
+                if (unitx > 0) currTileX++;
+                else currTileX--;
+            }
+            else {
+                hdist = vunits * unitx;
+                vdist = vunits * unity;
+                if (unity > 0) currTileY++;
+                else currTileY--;
+            }
+            currx += hdist;
+            curry += vdist;
+            currDist += Math.sqrt(hdist * hdist + vdist * vdist);
+        }
+        return [maxDist, null];
+    }
 
     nodeMap = new Map<string, Node>();
     getNode(x: number, y: number): Node;

@@ -4832,6 +4832,44 @@ var EnemyController = (function (_super) {
             }
         }
     };
+    EnemyController.isSolidHitCondition = function (tile) {
+        return tile.isSolid;
+    };
+    EnemyController.prototype.raycast = function (fromx, fromy, unitx, unity, maxDist, hitCondition) {
+        if (maxDist === void 0) { maxDist = 500; }
+        if (hitCondition === void 0) { hitCondition = EnemyController.isSolidHitCondition; }
+        var currx = fromx, curry = fromy;
+        var currTileX = Math.floor(fromx), currTileY = Math.floor(fromy);
+        var currDist = 0;
+        while (currDist <= maxDist) {
+            var tile = this.getTileAt(currTileX, currTileY);
+            if (hitCondition(tile))
+                return [currDist, tile];
+            var hunits = ((unitx > 0) ? (Math.floor(currx) + 1) - currx : (Math.ceil(currx) - 1) - currx) / unitx;
+            var vunits = ((unity > 0) ? (Math.floor(curry) + 1) - curry : (Math.ceil(curry) - 1) - curry) / unity;
+            var hdist = void 0, vdist = void 0;
+            if (hunits < vunits) {
+                hdist = hunits * unitx;
+                vdist = hunits * unity;
+                if (unitx > 0)
+                    currTileX++;
+                else
+                    currTileX--;
+            }
+            else {
+                hdist = vunits * unitx;
+                vdist = vunits * unity;
+                if (unity > 0)
+                    currTileY++;
+                else
+                    currTileY--;
+            }
+            currx += hdist;
+            curry += vdist;
+            currDist += Math.sqrt(hdist * hdist + vdist * vdist);
+        }
+        return [maxDist, null];
+    };
     EnemyController.prototype.getNode = function (x, y, includeSolid) {
         if (includeSolid === void 0) { includeSolid = true; }
         var key = node_1.keyFromCoords(x, y);
@@ -5030,6 +5068,10 @@ var Enemy = (function (_super) {
                 case 4: return [2];
             }
         });
+    };
+    Enemy.prototype.raycast = function (unitx, unity, maxDist, hitCondition) {
+        if (maxDist === void 0) { maxDist = 500; }
+        return this.controller.raycast(this.x / tile_db_1.TILE_SIZE, this.y / tile_db_1.TILE_SIZE, unitx, unity, maxDist, hitCondition);
     };
     Enemy.prototype.tick = function (delta) {
         this._fowClearTime -= delta;
@@ -5279,6 +5321,7 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 var state_1 = __webpack_require__(3);
+var tile_db_1 = __webpack_require__(1);
 var engine_1 = __webpack_require__(0);
 var WanderState = (function (_super) {
     __extends(WanderState, _super);
@@ -5288,6 +5331,7 @@ var WanderState = (function (_super) {
         _this.targetSpeed = targetSpeed;
         _this.steeringDirection = 0;
         _this.turnSpeed = 1;
+        _this.raycasts = [];
         _this.newSteeringDir = 0;
         return _this;
     }
@@ -5306,19 +5350,61 @@ var WanderState = (function (_super) {
         configurable: true
     });
     WanderState.prototype.tick = function (delta) {
-        var controller = this.self.controller;
-        var states = this.self.states;
-        this.self.speed += (this.targetSpeed - this.self.speed) * (1 - Math.pow(1 - delta, 2));
+        var self = this.self;
+        var controller = self.controller;
+        var states = self.states;
+        self.speed += (this.targetSpeed - self.speed) * (1 - Math.pow(1 - delta, 2));
+        var forward = [self.hspeed / self.speed, self.vspeed / self.speed];
+        var right = [forward[1], -forward[0]];
+        var projectSides = 12;
+        var projectForward = 150 / tile_db_1.TILE_SIZE;
+        var rcRightForward = {
+            xstart: self.x + right[0] * projectSides,
+            ystart: self.y + right[1] * projectSides,
+            xunit: forward[0] + right[0] * .2,
+            yunit: forward[1] + right[1] * .2,
+            distance: 0
+        };
+        rcRightForward.distance = controller.raycast(rcRightForward.xstart / tile_db_1.TILE_SIZE, rcRightForward.ystart / tile_db_1.TILE_SIZE, rcRightForward.xunit, rcRightForward.yunit, projectForward)[0];
+        rcRightForward.distance *= tile_db_1.TILE_SIZE;
+        var rcLeftForward = {
+            xstart: self.x - right[0] * projectSides,
+            ystart: self.y - right[1] * projectSides,
+            xunit: forward[0] - right[0] * .2,
+            yunit: forward[1] - right[1] * .2,
+            distance: 0
+        };
+        rcLeftForward.distance = controller.raycast(rcLeftForward.xstart / tile_db_1.TILE_SIZE, rcLeftForward.ystart / tile_db_1.TILE_SIZE, rcLeftForward.xunit, rcLeftForward.yunit, projectForward)[0];
+        rcLeftForward.distance *= tile_db_1.TILE_SIZE;
+        this.raycasts = [rcRightForward, rcLeftForward];
         this.newSteeringDir -= delta;
         if (this.newSteeringDir <= 0) {
             this.steeringDirection = engine_1.clamp(this.steeringDirection + (Math.random() - .5) * 2, -1, 1);
             this.newSteeringDir = .25;
         }
-        this.self.direction += this.turnSpeed * 1.2 * this.steeringDirection;
+        this.steeringDirection = engine_1.clamp(this.steeringDirection + (rcRightForward.distance - rcLeftForward.distance) / 120, -1, 1);
+        self.direction += this.turnSpeed * 1.2 * this.steeringDirection;
         _super.prototype.tick.call(this, delta);
+    };
+    WanderState.prototype.render = function (context) {
+        _super.prototype.render.call(this, context);
+        if (!this.self.renderDebugInfo)
+            return;
+        context.strokeStyle = 'purple';
+        context.fillStyle = 'purple';
+        context.beginPath();
+        for (var _i = 0, _a = this.raycasts; _i < _a.length; _i++) {
+            var raycast = _a[_i];
+            context.moveTo(raycast.xstart, raycast.ystart);
+            context.lineTo(raycast.xstart + (raycast.xunit * raycast.distance), raycast.ystart + (raycast.yunit * raycast.distance));
+            context.fillRect(raycast.xstart - 1, raycast.ystart, 2, 2);
+        }
+        context.stroke();
     };
     WanderState.prototype.renderImpl = function (context) {
         _super.prototype.renderImpl.call(this, context);
+        if (!this.self.renderDebugInfo)
+            return;
         context.fillStyle = 'lightgrey';
         context.fillRect(20, -11, 2, 22);
         context.fillStyle = 'red';

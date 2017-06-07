@@ -3,7 +3,7 @@ import { EnemyController } from './enemy-controller';
 import { StateMachine } from './states/state-machine';
 import { NeutralState } from './states/neutral-state';
 import { alives } from '../dbs/alive-db';
-import { TILE_SIZE } from '../dbs/tile-db';
+import { WorldTile, TILE_SIZE } from '../dbs/tile-db';
 import merge = require('lodash.merge');
 import { pointDistance, pointDistance2 } from '../utils/math';
 import { pointDirection } from '../engine';
@@ -63,6 +63,9 @@ export class Enemy extends GameObject {
         for (let q = 0; q <= dist; q++) {
             yield [Math.floor((x + (q * hunit)) / TILE_SIZE), Math.floor((y + (q * vunit)) / TILE_SIZE)];
         }
+    }
+    raycast(unitx: number, unity: number, maxDist = 500, hitCondition?: (tile: WorldTile) => boolean) {
+        return this.controller.raycast(this.x / TILE_SIZE, this.y / TILE_SIZE, unitx, unity, maxDist, hitCondition);
     }
 
     private _fowClearTime = Math.random() * FOW_CLEAR_RESET_TIME;
